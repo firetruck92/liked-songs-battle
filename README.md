@@ -42,3 +42,7 @@ python -m http.server 8000 --bind 127.0.0.1
 - `build.py` — собирает `index.html` (сайт) и `dist/claude-artifact.html` (версия для Claude-артефакта без входа через Spotify)
 
 После правок в `src/` запусти `python build.py`.
+
+## Деплой
+
+Сайт собирается и публикуется через GitHub Actions (`.github/workflows/pages.yml`) при каждом пуше в `main`: workflow запускает `build.py` и выкладывает `index.html` на GitHub Pages. Один раз нужно включить в **Settings → Pages → Source: GitHub Actions**.
