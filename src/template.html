@@ -425,7 +425,7 @@ function viewImport() {
     const fileWarn = location.protocol === 'file:' ? `<div class="err" style="margin:0 0 14px">Страница открыта как файл, так вход не сработает. Запусти в папке с файлом <code>python -m http.server 8000 --bind 127.0.0.1</code> и открой <code>http://127.0.0.1:8000/${esc(location.pathname.split('/').pop())}</code>. CSV-файлы работают и так.</div>` : '';
     const cid = (LS.get('cid', '') || DEFAULT_CLIENT_ID);
     body = `${fileWarn}
-      ${cid ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="login()">${SPOT}Войти через Spotify</button></div>` : ''}
+      ${LS.get('tok', null) ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="refresh()">${SPOT}Загрузить мои лайки</button><div class="mut small" style="margin-top:8px">Ты уже вошёл в Spotify · <a href="#" onclick="LS.del('tok');render();return false">войти заново</a></div></div>` : (cid ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="login()">${SPOT}Войти через Spotify</button></div>` : '')}
       <div id="msg" class="err" style="text-align:center">${esc(msg)}</div>
       <details ${cid ? '' : 'open'}><summary>${cid ? 'Настройки приложения Spotify' : 'Первый запуск: подключи своё приложение Spotify (~2 минуты, один раз)'}</summary>
         <ol class="steps" style="margin-top:12px">
@@ -588,10 +588,12 @@ document.addEventListener('keydown', e => {
 
 (async () => {
   if (FULL) {
+    const hadCode = new URLSearchParams(location.search).has('code');
     let m = null;
     try { m = await handleCallback(); } catch (e) { m = String(e.message || e); }
     if (m) { msg = m; srcTab = 'spotify'; view = 'import'; render(); return; }
-    if (LS.get('tok', null) && new URLSearchParams(location.search).size === 0 && sessionStorage.getItem('justLogged')) { sessionStorage.removeItem('justLogged'); return refresh(); }
+    // только что вернулись из Spotify, или вошли, но лайков ещё нет — грузим сразу
+    if (LS.get('tok', null) && (hadCode || !tracks)) return refresh();
   }
   render();
 })();
