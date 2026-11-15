@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liked Songs Battle</title>
+<style>
+  :root{
+    --bg:#0b0b0c;--panel:#161618;--panel2:#1f1f22;--line:#2a2a2e;
+    --fg:#f4f4f5;--mut:#9b9ba3;--acc:#1db954;--acc2:#1ed760;--bad:#ff6b6b;
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg)}
+  body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(900px 400px at 50% -120px,#1db95422,transparent 70%),var(--bg);min-height:100vh}
+  #app{max-width:960px;margin:0 auto;padding:32px 20px 64px}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+  .mut{color:var(--mut)} .small{font-size:13px}
+  .err{color:var(--bad);margin-top:12px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .dot{width:38px;height:38px;border-radius:50%;background:var(--acc);display:grid;place-items:center;color:#000;font-weight:900;font-size:18px}
+  .logo h1{font-size:22px;margin:0;letter-spacing:-.01em}
+  .logo .sub{font-size:13px;color:var(--mut);margin-top:-2px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;margin-bottom:16px}
+  .panel h2{font-size:17px;margin:0 0 4px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .spacer{flex:1}
+  button{font:inherit;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:9px 18px;cursor:pointer;background:var(--panel2);color:var(--fg);transition:background .15s,border-color .15s,transform .05s}
+  button:hover{border-color:#44444a;background:#26262a}
+  button:active{transform:scale(.98)}
+  button.pri{background:var(--acc);border-color:var(--acc);color:#000}
+  button.pri:hover{background:var(--acc2);border-color:var(--acc2)}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.4;cursor:default;transform:none}
+  input,textarea{font:inherit;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+  input:focus,textarea:focus{border-color:var(--acc)}
+  textarea{width:100%;min-height:130px;resize:vertical;display:block}
+  input[type=number]{width:96px}
+  code{background:var(--panel2);border:1px solid var(--line);padding:2px 7px;border-radius:6px;word-break:break-all;font-size:13px}
+  .seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px;gap:2px;margin:16px 0 20px;flex-wrap:wrap}
+  .seg button{border:0;background:transparent;color:var(--mut);padding:7px 16px}
+  .seg button.act{background:var(--fg);color:#000}
+  .steps{margin:0 0 18px;padding:0;list-style:none;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;padding:4px 0 4px 36px;margin:4px 0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:4px;width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--mut)}
+  .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:150px;border:2px dashed #34343a;border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+  .drop:hover,.drop.on{border-color:var(--acc);background:#1db9540d}
+  .drop .ic{font-size:28px;line-height:1}
+  .files{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .files li{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .files .fn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .files .x{margin-left:auto;padding:3px 10px;font-size:13px}
+  .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}
+  details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}
+  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+  .opt{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px 14px;cursor:pointer}
+  .opt input{display:none}
+  .opt:has(input:checked){border-color:var(--acc);background:#1db95414}
+  .opt b{font-size:15px}
+  .stat{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+  .bar>div{height:100%;background:var(--acc);transition:width .25s}
+  .stage{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .stage b{font-size:22px;letter-spacing:-.01em}
+  .vs{display:grid;grid-template-columns:1fr 56px 1fr;gap:12px;margin-top:20px;align-items:stretch}
+  .vsmark{display:grid;place-items:center}
+  .vsmark span{width:48px;height:48px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--mut);font-size:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px;transition:border-color .15s,transform .15s}
+  .card:hover{border-color:var(--acc)}
+  .cover{width:100%;aspect-ratio:1;border-radius:12px;object-fit:cover;display:grid;place-items:center;cursor:pointer;background:var(--panel2);font-size:64px;font-weight:800;color:#ffffffd9;text-shadow:0 2px 14px #0006;user-select:none}
+  .meta{min-height:66px}
+  .tname{font-size:18px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+  .tart{color:var(--mut)} .tal{color:var(--mut);font-size:13px}
+  .card iframe{border:0;border-radius:12px;width:100%;display:block;background:var(--panel2)}
+  .card .listen{font-size:14px;font-weight:600}
+  .card .pick{margin-top:auto;width:100%;padding:12px}
+  .center{display:flex;justify-content:center;margin-top:18px}
+  .winner{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:center}
+  .winner .cover{cursor:default}
+  .winner iframe{border:0;border-radius:12px;width:100%;max-width:460px;height:152px;margin-top:12px}
+  .crown{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+  .rank{list-style:none;padding:0;margin:0}
+  .rank li{display:grid;grid-template-columns:32px 44px 1fr auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+  .rank li:last-child{border-bottom:0}
+  .rank .num{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
+  .rank .sq{width:44px;height:44px;border-radius:6px;object-fit:cover;display:grid;place-items:center;font-weight:800;color:#fffd;background:var(--panel2)}
+  .rank .t{min-width:0}
+  .rank .t div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill{font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:2px 10px;white-space:nowrap}
+  .pill.g{color:#000;background:var(--acc);border-color:var(--acc);font-weight:700}
+  .kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:12px;color:var(--fg);background:var(--panel2)}
+  .modal{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:9}
+  .modal .panel{max-width:420px;margin:0}
+  .loader{display:flex;flex-direction:column;gap:10px}
+  .modal .panel.wide{max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto}
+  .shareimg{width:100%;border-radius:12px;display:block;border:1px solid var(--line);background:var(--panel2);aspect-ratio:4/5;object-fit:contain}
+  .big{padding:14px 26px;font-size:16px}
+  .spot{display:inline-flex;align-items:center;gap:10px}
+  .spot svg{width:22px;height:22px}
+  @media (max-width:720px){
+    #app{padding:20px 14px 48px}
+    .vs{grid-template-columns:1fr}.vsmark{height:24px}.vsmark span{width:40px;height:40px}
+    .opts{grid-template-columns:1fr}
+    .winner{grid-template-columns:1fr}.winner .cover{max-width:240px}
+    .cover{font-size:48px}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const MODE = 'artifact'; // 'local' — full version (Spotify login, covers, previews); 'artifact' — sandboxed
+const FULL = MODE === 'local';
+const SCOPES = 'user-library-read';
+const REDIRECT_URI = location.origin + location.pathname.replace(/index\.html$/, '');
+// Можно вписать сюда Client ID своего Spotify-приложения — тогда вход будет сразу одной кнопкой.
+const DEFAULT_CLIENT_ID = '';
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+function randStr(n) { const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; return Array.from(crypto.getRandomValues(new Uint8Array(n)), x => c[x % c.length]).join(''); }
+async function challenge(v) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)); return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
+function grad(t) { const h = hash(t.a + '|' + t.al), h1 = h % 360, h2 = (h1 + 40 + (h >> 9) % 80) % 360; return `background:linear-gradient(135deg,hsl(${h1} 55% 40%),hsl(${h2} 60% 20%))`; }
+function initials(t) { return (t.n || '?').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '♪'; }
+function sidOf(uri) { const m = String(uri || '').match(/(?:spotify:track:|open\.spotify\.com\/(?:intl-\w+\/)?track\/)([A-Za-z0-9]{22})/); return m ? m[1] : ''; }
+function spUrl(t) { return t.sid ? 'https://open.spotify.com/track/' + t.sid : 'https://open.spotify.com/search/' + encodeURIComponent((t.a ? t.a + ' ' : '') + t.n); }
+const embed = (sid, h) => `<iframe src="https://open.spotify.com/embed/track/${esc(sid)}?utm_source=generator&theme=0" style="height:${h}px" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+
+let tracks = LS.get('tracks', null);
+let T = LS.get('tournament', null);
+let view = 'menu', showAll = false, srcTab = FULL ? 'spotify' : 'files', msg = '';
+const SPOT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21Zm4.8 15.15a.66.66 0 0 1-.9.22c-2.48-1.51-5.6-1.86-9.27-1.02a.66.66 0 1 1-.3-1.28c4.02-.92 7.47-.52 10.25 1.18.31.19.41.6.22.9Zm1.28-2.85a.82.82 0 0 1-1.13.27c-2.84-1.75-7.17-2.25-10.53-1.23a.82.82 0 1 1-.48-1.57c3.84-1.17 8.61-.6 11.87 1.4.39.24.51.75.27 1.13Zm.11-2.97C14.79 8.8 9.17 8.6 5.92 9.6a.98.98 0 1 1-.57-1.88c3.73-1.13 9.94-.91 13.85 1.41a.98.98 0 0 1-1 1.69Z"/></svg>';
+let pending = [];
+
+/* ---------- Spotify login (full version only) ---------- */
+// вход через Spotify недоступен в артефакте
+async function login(){} async function api(){ throw new Error("NOAUTH"); }
+async function loadLiked() {
+  app.innerHTML = shell(`<div class="panel loader"><h2>Загружаю лайки из Spotify…</h2><div class="mut" id="lp">Начинаю</div><div class="bar"><div id="lb" style="width:0"></div></div></div>`);
+  let url = 'https://api.spotify.com/v1/me/tracks?limit=50';
+  const out = [];
+  while (url) {
+    const j = await api(url);
+    for (const it of j.items) {
+      const t = it.track;
+      if (!t || !t.id || t.is_local) continue;
+      const imgs = (t.album && t.album.images) || [];
+      const mid = imgs.find(i => i.width && i.width <= 320 && i.width >= 200) || imgs[imgs.length - 1] || {};
+      out.push({ n: t.name, a: (t.artists || []).map(x => x.name).join(', '), al: t.album ? t.album.name : '',
+        uri: t.uri, img: (imgs[0] || {}).url || '', thumb: mid.url || '', added: it.added_at });
+    }
+    const lp = document.getElementById('lp'), lb = document.getElementById('lb');
+    if (lp) lp.textContent = `${out.length} из ${j.total}`;
+    if (lb) lb.style.width = (j.total ? Math.min(100, (j.offset + j.items.length) / j.total * 100) : 100) + '%';
+    url = j.next;
+  }
+  setTracks(out, true);
+}
+
+/* ---------- Import from files / text ---------- */
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+function fromCSV(text) {
+  const rows = parseCSV(text.replace(/^﻿/, ''));
+  if (rows.length < 2) throw new Error('в файле нет строк с треками');
+  const h = rows[0].map(x => x.trim().toLowerCase());
+  const col = (...names) => { for (const n of names) { let i = h.indexOf(n); if (i < 0) i = h.findIndex(x => x.includes(n) && !(n === 'name' && /album|artist|playlist|label/.test(x))); if (i >= 0) return i; } return -1; };
+  const iN = col('track name', 'name', 'title', 'название'), iA = col('artist name', 'artist', 'исполнитель'),
+        iAl = col('album name', 'album', 'альбом'), iU = col('track uri', 'uri', 'spotify id', 'url'),
+        iD = col('added at', 'date added'), iI = col('album image url', 'image');
+  if (iN < 0) throw new Error('не нашёл колонку с названием трека (Track Name)');
+  return rows.slice(1).map(r => ({ n: r[iN], a: iA >= 0 ? (r[iA] || '').replace(/\\,/g, ',') : '', al: iAl >= 0 ? r[iAl] : '',
+    uri: iU >= 0 ? r[iU] : '', added: iD >= 0 ? r[iD] : '', img: iI >= 0 ? r[iI] : '' })).filter(t => t.n);
+}
+function fromJSON(text) {
+  const j = JSON.parse(text);
+  const arr = Array.isArray(j) ? j : (j.tracks || j.items || []);
+  return arr.map(x => {
+    const t = x.track && typeof x.track === 'object' ? x.track : x;
+    return { n: t.track || t.name || t.trackName || '', a: t.artist || t.artistName || (t.artists ? t.artists.map(a => a.name || a).join(', ') : ''),
+      al: typeof t.album === 'string' ? t.album : (t.album && t.album.name) || '', uri: t.uri || '', added: x.added_at || '' };
+  }).filter(t => t.n);
+}
+function fromText(text) {
+  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const sid = sidOf(l);
+    if (sid) return { n: 'Трек ' + sid.slice(0, 6), a: '', uri: 'spotify:track:' + sid };
+    const m = l.match(/^(.+?)\s+[—–-]\s+(.+)$/);
+    return m ? { a: m[1].trim(), n: m[2].trim() } : { a: '', n: l };
+  });
+}
+function setTracks(list, sortByAdded) {
+  const seen = new Set(), out = [];
+  for (const t of list) {
+    const sid = sidOf(t.uri);
+    const key = sid || ((t.a || '') + '|' + t.n).toLowerCase();
+    if (seen.has(key)) continue; seen.add(key);
+    out.push({ n: String(t.n).trim(), a: (t.a || '').trim(), al: (t.al || '').trim(), sid,
+      img: FULL ? (t.img || '') : '', thumb: FULL ? (t.thumb || t.img || '') : '', added: t.added || '' });
+  }
+  if (out.length < 2) throw new Error('нужно хотя бы 2 трека, нашёл ' + out.length);
+  if (sortByAdded && out.some(t => t.added)) out.sort((x, y) => (y.added || '').localeCompare(x.added || ''));
+  out.forEach((t, i) => t.id = 'x' + i);
+  tracks = out; LS.set('tracks', tracks); LS.set('tracksAt', Date.now());
+}
+async function addFiles(files) {
+  msg = '';
+  for (const f of files) {
+    try {
+      const text = await f.text();
+      const list = (/\.json$/i.test(f.name) || /^\s*[\[{]/.test(text)) ? fromJSON(text) : fromCSV(text);
+      if (!list.length) throw new Error('треков не найдено');
+      pending = pending.filter(p => p.name !== f.name).concat({ name: f.name, list });
+    } catch (e) { msg = `«${f.name}»: ${e.message}`; }
+  }
+  render();
+}
+function removeFile(i) { pending.splice(i, 1); render(); }
+function pendingCount() { const s = new Set(); pending.forEach(p => p.list.forEach(t => s.add(sidOf(t.uri) || ((t.a || '') + '|' + t.n).toLowerCase()))); return s.size; }
+function usePending() { try { setTracks(pending.flatMap(p => p.list), true); pending = []; msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }
+function importPasted() { try { setTracks(fromText(document.getElementById('paste').value), false); msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }
+function demo() { const d = []; for (let i = 1; i <= 16; i++) d.push({ a: 'Демо-артист ' + ((i % 5) + 1), n: 'Песня №' + i, al: 'Демо-альбом' }); setTracks(d, false); view = 'menu'; render(); }
+function forget() { ask('Удалить загруженный список и турнир?', () => { LS.del('tracks'); LS.del('tournament'); LS.del('tok'); tracks = null; T = null; view = 'import'; render(); }); }
+
+/* ---------- Tournament ---------- */
+function newTournament(ids) {
+  const n = ids.length;
+  let p = 1; while (p * 2 <= n) p *= 2;
+  const sh = shuffle(ids), meta = {};
+  const byId = Object.fromEntries(tracks.map(t => [t.id, t]));
+  ids.forEach(id => meta[id] = byId[id]);
+  const t = { n, p, cur: [], next: [], i: 0, stage: n, playIn: false, elim: [], done: 0, total: n - 1, hist: [], meta, winner: null };
+  if (n === p) t.cur = sh;
+  else { const k = n - p; t.cur = sh.slice(0, 2 * k); t.next = sh.slice(2 * k); t.playIn = true; }
+  return t;
+}
+function save() {
+  if (!LS.set('tournament', T)) { T.hist = T.hist.slice(-2); LS.set('tournament', T); }
+}
+function snapshot() { const { hist, meta, ...rest } = T; return JSON.stringify(rest); }
+function pick(side) {
+  if (!T || T.winner) return;
+  if (side < 0) side = Math.random() < .5 ? 0 : 1;
+  const a = T.cur[T.i], b = T.cur[T.i + 1];
+  T.hist.push(snapshot()); if (T.hist.length > 10) T.hist.shift();
+  const w = side ? b : a, l = side ? a : b;
+  T.next.push(w);
+  T.elim.push({ id: l, stage: T.stage, playIn: T.playIn });
+  T.i += 2; T.done++;
+  if (T.i >= T.cur.length) {
+    if (T.next.length === 1) T.winner = T.next[0];
+    else { T.cur = shuffle(T.next); T.next = []; T.i = 0; T.stage = T.cur.length; T.playIn = false; }
+  }
+  save(); render();
+}
+function undo() {
+  if (!T || !T.hist.length) return;
+  const s = JSON.parse(T.hist.pop());
+  T = { ...s, hist: T.hist, meta: T.meta };
+  save(); render();
+}
+function stageName() {
+  if (T.playIn) return `Отборочный раунд (до ${T.p})`;
+  const s = T.stage;
+  return s === 2 ? 'Финал' : s === 4 ? 'Полуфинал' : s === 8 ? 'Четвертьфинал' : `1/${s / 2} финала`;
+}
+function ranking() {
+  const r = [{ id: T.winner, label: '🏆 Победитель' }];
+  const el = T.elim.slice().sort((x, y) => (x.playIn - y.playIn) || (x.stage - y.stage));
+  for (const e of el) r.push({ id: e.id, label: e.playIn ? 'отбор' : e.stage === 2 ? '2 место' : `топ-${e.stage}` });
+  return r;
+}
+const tr = id => (T && T.meta[id]) || { id, n: '(трек не найден)', a: '', al: '', img: '', big: '' };
+
+
+/* ---------- UI helpers ---------- */
+function shell(inner, right = '') {
+  return `<header><div class="logo"><div class="dot">♥</div><div><h1>Liked Songs Battle</h1><div class="sub">Выбери любимый трек из своих лайков</div></div></div><div class="row">${right}</div></header>${inner}`;
+}
+function ask(text, yes) {
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="panel"><div style="margin-bottom:16px">${esc(text)}</div><div class="row"><button class="pri" id="mY">Да</button><button id="mN">Отмена</button></div></div>`;
+  document.body.appendChild(m);
+  m.querySelector('#mY').onclick = () => { m.remove(); yes(); };
+  m.querySelector('#mN').onclick = () => m.remove();
+  m.onclick = e => { if (e.target === m) m.remove(); };
+}
+function copy(text, btn) {
+  try { navigator.clipboard.writeText(text).then(() => btn.textContent = 'Скопировано ✓', () => btn.textContent = 'Не вышло скопировать'); }
+  catch { btn.textContent = 'Не вышло скопировать'; }
+}
+function art(t, cls, big) {
+  const src = big ? (t.img || t.thumb) : (t.thumb || t.img);
+  if (FULL && src) return `<img class="${cls}" src="${esc(src)}" alt="" ${cls === 'cover' ? 'onclick="this.dataset.side&&pick(+this.dataset.side)"' : ''}>`;
+  return `<div class="${cls}" style="${grad(t)}">${esc(cls === 'sq' ? initials(t)[0] : initials(t))}</div>`;
+}
+
+
+/* ---------- Share image ---------- */
+let DL = null;
+if (!FULL && window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then(d => { DL = d; }).catch(() => {});
+const FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif';
+function loadImg(src) {
+  return new Promise(res => {
+    if (!src) return res(null);
+    const im = new Image(); let done = false;
+    const end = v => { if (!done) { done = true; res(v); } };
+    im.crossOrigin = 'anonymous';
+    im.onload = () => end(im); im.onerror = () => end(null);
+    setTimeout(() => end(null), 5000);
+    im.src = src;
+  });
+}
+async function coverFor(t) {
+  if (!FULL) return null;
+  let src = t.img || t.thumb;
+  if (!src && t.sid) {
+    try {
+      const r = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent('https://open.spotify.com/track/' + t.sid));
+      if (r.ok) src = (await r.json()).thumbnail_url;
+    } catch {}
+  }
+  return loadImg(src);
+}
+function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function fit(ctx, text, maxW) {
+  text = String(text || '');
+  if (ctx.measureText(text).width <= maxW) return text;
+  let s = text; while (s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+  return s.trimEnd() + '…';
+}
+function wrap2(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return [text];
+  const words = text.split(/\s+/); let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxW && line) return [line, fit(ctx, words.slice(i).join(' '), maxW)];
+    line = test;
+  }
+  return [fit(ctx, line, maxW)];
+}
+function drawArt(ctx, img, t, x, y, s, r) {
+  ctx.save(); rrect(ctx, x, y, s, s, r); ctx.clip();
+  if (img) ctx.drawImage(img, x, y, s, s);
+  else {
+    const h = hash(t.a + '|' + t.al), h1 = h % 360, h2 = (h1 + 40 + (h >> 9) % 80) % 360;
+    const g = ctx.createLinearGradient(x, y, x + s, y + s);
+    g.addColorStop(0, `hsl(${h1},55%,40%)`); g.addColorStop(1, `hsl(${h2},60%,20%)`);
+    ctx.fillStyle = g; ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `800 ${Math.round(s * .3)}px ${FONT}`; ctx.fillText(initials(t), x + s / 2, y + s / 2 + s * .02);
+    ctx.textBaseline = 'alphabetic';
+  }
+  ctx.restore();
+}
+async function makeShareImage() {
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  const r = ranking(), w = tr(T.winner), rest = r.slice(1, 5).map(x => ({ t: tr(x.id), label: x.label }));
+  const [wImg, ...rImgs] = await Promise.all([coverFor(w), ...rest.map(x => coverFor(x.t))]);
+  ctx.fillStyle = '#0b0b0c'; ctx.fillRect(0, 0, W, H);
+  const gl = ctx.createRadialGradient(W / 2, 60, 40, W / 2, 60, 820);
+  gl.addColorStop(0, 'rgba(29,185,84,.32)'); gl.addColorStop(1, 'rgba(29,185,84,0)');
+  ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#1db954'; ctx.font = `800 24px ${FONT}`;
+  ctx.fillText('L I K E D   S O N G S   B A T T L E', W / 2, 80);
+  ctx.fillStyle = '#f4f4f5'; ctx.font = `800 52px ${FONT}`;
+  ctx.fillText('🏆 Мой любимый трек', W / 2, 146);
+  const S = 480, cx = (W - S) / 2, cy = 190;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 18; ctx.fillStyle = '#000'; rrect(ctx, cx, cy, S, S, 28); ctx.fill(); ctx.restore();
+  drawArt(ctx, wImg, w, cx, cy, S, 28);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f4f5'; ctx.font = `800 56px ${FONT}`;
+  const lines = wrap2(ctx, w.n, W - 140); let y = cy + S + 82;
+  lines.forEach(l => { ctx.fillText(l, W / 2, y); y += 64; });
+  ctx.fillStyle = '#b5b5bd'; ctx.font = `500 34px ${FONT}`; ctx.fillText(fit(ctx, w.a, W - 160), W / 2, y);
+  ctx.fillStyle = '#7c7c85'; ctx.font = `500 25px ${FONT}`; ctx.fillText(`победил среди ${T.n} треков · ${T.total} выборов`, W / 2, y + 44);
+  const ly = y + 84;
+  if (rest.length) {
+    const boxH = H - ly - 64;
+    ctx.fillStyle = 'rgba(255,255,255,.045)'; rrect(ctx, 70, ly, W - 140, boxH, 24); ctx.fill();
+    const rowH = Math.min(80, (boxH - 24) / rest.length), s = Math.max(30, Math.min(54, rowH - 16));
+    rest.forEach((x, i) => {
+      const ry = ly + 12 + i * rowH + (rowH - s) / 2, mid = ry + s / 2;
+      ctx.textAlign = 'left'; ctx.fillStyle = '#7c7c85'; ctx.font = `700 26px ${FONT}`; ctx.fillText(String(i + 2), 102, mid + 9);
+      drawArt(ctx, rImgs[i], x.t, 142, ry, s, 8);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#f4f4f5'; ctx.font = `700 26px ${FONT}`; ctx.fillText(fit(ctx, x.t.n, 560), 142 + s + 20, mid - 3);
+      ctx.fillStyle = '#9b9ba3'; ctx.font = `500 21px ${FONT}`; ctx.fillText(fit(ctx, x.t.a, 560), 142 + s + 20, mid + 24);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#9b9ba3'; ctx.font = `600 21px ${FONT}`; ctx.fillText(x.label, W - 102, mid + 8);
+    });
+  }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#55555c'; ctx.font = `500 21px ${FONT}`;
+  ctx.fillText(new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, H - 26);
+  return new Promise(res => c.toBlob(res, 'image/png'));
+}
+let shareBlob = null, shareURL = null;
+async function openShare() {
+  closeShare();
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'shareModal';
+  m.innerHTML = `<div class="panel wide"><div class="row" style="margin-bottom:12px"><h2>Картинка с результатом</h2><span class="spacer"></span><button class="ghost" onclick="closeShare()">✕</button></div><div class="shareimg" style="display:grid;place-items:center" id="shBox"><span class="mut">Рисую…</span></div><div class="row" id="shBtns" style="margin-top:14px"></div><div class="mut small" id="shMsg" style="margin-top:10px"></div></div>`;
+  m.onclick = e => { if (e.target === m) closeShare(); };
+  document.body.appendChild(m);
+  try { shareBlob = await makeShareImage(); } catch (e) { console.error(e); shareBlob = null; }
+  if (!document.getElementById('shareModal')) return;
+  if (!shareBlob) { document.getElementById('shBox').innerHTML = '<span class="err">Не получилось нарисовать картинку</span>'; return; }
+  if (shareURL) URL.revokeObjectURL(shareURL);
+  shareURL = URL.createObjectURL(shareBlob);
+  document.getElementById('shBox').outerHTML = `<img class="shareimg" src="${shareURL}" alt="Результат">`;
+  const file = new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' });
+  const btns = [];
+  let canNative = false; try { canNative = FULL && !!navigator.canShare && navigator.canShare({ files: [file] }); } catch {}
+  if (canNative) btns.push(`<button class="pri" onclick="shareNative()">Поделиться</button>`);
+  if (FULL || DL) btns.push(`<button class="${btns.length ? '' : 'pri'}" onclick="saveShare()">Сохранить PNG</button>`);
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) btns.push(`<button onclick="copyShare(this)">Копировать картинку</button>`);
+  document.getElementById('shBtns').innerHTML = btns.join('');
+  shMsg(btns.length ? '' : 'Сохрани картинку: правый клик или долгое нажатие → «Сохранить изображение».');
+}
+function closeShare() { const m = document.getElementById('shareModal'); if (m) m.remove(); }
+function shMsg(s) { const e = document.getElementById('shMsg'); if (e) e.textContent = s; }
+async function shareNative() {
+  const w = tr(T.winner);
+  try { await navigator.share({ files: [new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' })], title: 'Мой любимый трек', text: `Мой любимый трек из лайков: ${w.a ? w.a + ' — ' : ''}${w.n}` }); }
+  catch (e) { if (e.name !== 'AbortError') shMsg('Не получилось открыть меню «Поделиться» — сохрани PNG.'); }
+}
+async function saveShare() {
+  if (FULL) { const a = document.createElement('a'); a.href = shareURL; a.download = 'my-favorite-song.png'; document.body.appendChild(a); a.click(); a.remove(); shMsg('Сохранено ✓'); return; }
+  try { await DL.save({ filename: 'my-favorite-song.png', data: shareBlob }); shMsg('Сохранено ✓'); }
+  catch (e) { shMsg(e && e.code === 'declined' ? 'Сохранение отменено.' : 'Здесь сохранить не вышло — правый клик или долгое нажатие на картинке → «Сохранить изображение».'); }
+}
+async function copyShare(btn) {
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); btn.textContent = 'Скопировано ✓'; shMsg('Теперь вставь в любой чат (Ctrl+V).'); }
+  catch { btn.textContent = 'Не вышло'; shMsg('Копирование картинок здесь заблокировано — сохрани PNG.'); }
+}
+async function getFull(btn) {
+  if (!DL) { msg = 'Скачивание недоступно в этом окне — попроси файл spotify-battle.html у Claude в чате.'; render(); return; }
+  try { await DL.save({ filename: 'spotify-battle.html', data: FULL_SRC }); btn.textContent = 'Скачано ✓'; }
+  catch (e) { if (!(e && e.code === 'declined')) { msg = 'Не вышло скачать: ' + ((e && e.message) || 'ошибка'); render(); } }
+}
+const FULL_SRC = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>Liked Songs Battle<\/title>\n<style>\n  :root{\n    --bg:#0b0b0c;--panel:#161618;--panel2:#1f1f22;--line:#2a2a2e;\n    --fg:#f4f4f5;--mut:#9b9ba3;--acc:#1db954;--acc2:#1ed760;--bad:#ff6b6b;\n    --r:16px;\n  }\n  *{box-sizing:border-box}\n  html,body{margin:0;background:var(--bg);color:var(--fg)}\n  body{font:15px/1.5 system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;-webkit-font-smoothing:antialiased;\n    background:radial-gradient(900px 400px at 50% -120px,#1db95422,transparent 70%),var(--bg);min-height:100vh}\n  #app{max-width:960px;margin:0 auto;padding:32px 20px 64px}\n  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}\n  .mut{color:var(--mut)} .small{font-size:13px}\n  .err{color:var(--bad);margin-top:12px}\n  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:24px}\n  .logo{display:flex;align-items:center;gap:12px}\n  .logo .dot{width:38px;height:38px;border-radius:50%;background:var(--acc);display:grid;place-items:center;color:#000;font-weight:900;font-size:18px}\n  .logo h1{font-size:22px;margin:0;letter-spacing:-.01em}\n  .logo .sub{font-size:13px;color:var(--mut);margin-top:-2px}\n  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;margin-bottom:16px}\n  .panel h2{font-size:17px;margin:0 0 4px}\n  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}\n  .spacer{flex:1}\n  button{font:inherit;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:9px 18px;cursor:pointer;background:var(--panel2);color:var(--fg);transition:background .15s,border-color .15s,transform .05s}\n  button:hover{border-color:#44444a;background:#26262a}\n  button:active{transform:scale(.98)}\n  button.pri{background:var(--acc);border-color:var(--acc);color:#000}\n  button.pri:hover{background:var(--acc2);border-color:var(--acc2)}\n  button.ghost{background:transparent}\n  button:disabled{opacity:.4;cursor:default;transform:none}\n  input,textarea{font:inherit;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}\n  input:focus,textarea:focus{border-color:var(--acc)}\n  textarea{width:100%;min-height:130px;resize:vertical;display:block}\n  input[type=number]{width:96px}\n  code{background:var(--panel2);border:1px solid var(--line);padding:2px 7px;border-radius:6px;word-break:break-all;font-size:13px}\n  .seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px;gap:2px;margin:16px 0 20px;flex-wrap:wrap}\n  .seg button{border:0;background:transparent;color:var(--mut);padding:7px 16px}\n  .seg button.act{background:var(--fg);color:#000}\n  .steps{margin:0 0 18px;padding:0;list-style:none;counter-reset:s}\n  .steps li{counter-increment:s;position:relative;padding:4px 0 4px 36px;margin:4px 0}\n  .steps li::before{content:counter(s);position:absolute;left:0;top:4px;width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--mut)}\n  .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:150px;border:2px dashed #34343a;border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}\n  .drop:hover,.drop.on{border-color:var(--acc);background:#1db9540d}\n  .drop .ic{font-size:28px;line-height:1}\n  .files{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}\n  .files li{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}\n  .files .fn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n  .files .x{margin-left:auto;padding:3px 10px;font-size:13px}\n  .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}\n  details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}\n  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}\n  .opt{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px 14px;cursor:pointer}\n  .opt input{display:none}\n  .opt:has(input:checked){border-color:var(--acc);background:#1db95414}\n  .opt b{font-size:15px}\n  .stat{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.1}\n  .bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}\n  .bar>div{height:100%;background:var(--acc);transition:width .25s}\n  .stage{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}\n  .stage b{font-size:22px;letter-spacing:-.01em}\n  .vs{display:grid;grid-template-columns:1fr 56px 1fr;gap:12px;margin-top:20px;align-items:stretch}\n  .vsmark{display:grid;place-items:center}\n  .vsmark span{width:48px;height:48px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--mut);font-size:14px}\n  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px;transition:border-color .15s,transform .15s}\n  .card:hover{border-color:var(--acc)}\n  .cover{width:100%;aspect-ratio:1;border-radius:12px;object-fit:cover;display:grid;place-items:center;cursor:pointer;background:var(--panel2);font-size:64px;font-weight:800;color:#ffffffd9;text-shadow:0 2px 14px #0006;user-select:none}\n  .meta{min-height:66px}\n  .tname{font-size:18px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}\n  .tart{color:var(--mut)} .tal{color:var(--mut);font-size:13px}\n  .card iframe{border:0;border-radius:12px;width:100%;display:block;background:var(--panel2)}\n  .card .listen{font-size:14px;font-weight:600}\n  .card .pick{margin-top:auto;width:100%;padding:12px}\n  .center{display:flex;justify-content:center;margin-top:18px}\n  .winner{display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:center}\n  .winner .cover{cursor:default}\n  .winner iframe{border:0;border-radius:12px;width:100%;max-width:460px;height:152px;margin-top:12px}\n  .crown{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}\n  .rank{list-style:none;padding:0;margin:0}\n  .rank li{display:grid;grid-template-columns:32px 44px 1fr auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}\n  .rank li:last-child{border-bottom:0}\n  .rank .num{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}\n  .rank .sq{width:44px;height:44px;border-radius:6px;object-fit:cover;display:grid;place-items:center;font-weight:800;color:#fffd;background:var(--panel2)}\n  .rank .t{min-width:0}\n  .rank .t div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n  .pill{font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:2px 10px;white-space:nowrap}\n  .pill.g{color:#000;background:var(--acc);border-color:var(--acc);font-weight:700}\n  .kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:12px;color:var(--fg);background:var(--panel2)}\n  .modal{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:9}\n  .modal .panel{max-width:420px;margin:0}\n  .loader{display:flex;flex-direction:column;gap:10px}\n  .modal .panel.wide{max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto}\n  .shareimg{width:100%;border-radius:12px;display:block;border:1px solid var(--line);background:var(--panel2);aspect-ratio:4/5;object-fit:contain}\n  .big{padding:14px 26px;font-size:16px}\n  .spot{display:inline-flex;align-items:center;gap:10px}\n  .spot svg{width:22px;height:22px}\n  @media (max-width:720px){\n    #app{padding:20px 14px 48px}\n    .vs{grid-template-columns:1fr}.vsmark{height:24px}.vsmark span{width:40px;height:40px}\n    .opts{grid-template-columns:1fr}\n    .winner{grid-template-columns:1fr}.winner .cover{max-width:240px}\n    .cover{font-size:48px}\n  }\n<\/style>\n<\/head>\n<body>\n<div id=\"app\"><\/div>\n<script>\nconst MODE = 'local'; // 'local' — full version (Spotify login, covers, previews); 'artifact' — sandboxed\nconst FULL = MODE === 'local';\nconst SCOPES = 'user-library-read';\nconst REDIRECT_URI = location.origin + location.pathname.replace(/index\\.html$/, '');\n// Можно вписать сюда Client ID своего Spotify-приложения — тогда вход будет сразу одной кнопкой.\nconst DEFAULT_CLIENT_ID = '';\nconst app = document.getElementById('app');\nconst esc = s => String(s ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));\nconst sleep = ms => new Promise(r => setTimeout(r, ms));\nconst LS = {\n  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },\n  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },\n  del(k) { try { localStorage.removeItem(k); } catch {} }\n};\nfunction randStr(n) { const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; return Array.from(crypto.getRandomValues(new Uint8Array(n)), x => c[x % c.length]).join(''); }\nasync function challenge(v) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)); return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, ''); }\nfunction shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }\nfunction hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }\nfunction grad(t) { const h = hash(t.a + '|' + t.al), h1 = h % 360, h2 = (h1 + 40 + (h >> 9) % 80) % 360; return `background:linear-gradient(135deg,hsl(${h1} 55% 40%),hsl(${h2} 60% 20%))`; }\nfunction initials(t) { return (t.n || '?').replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim().split(/\\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '♪'; }\nfunction sidOf(uri) { const m = String(uri || '').match(/(?:spotify:track:|open\\.spotify\\.com\\/(?:intl-\\w+\\/)?track\\/)([A-Za-z0-9]{22})/); return m ? m[1] : ''; }\nfunction spUrl(t) { return t.sid ? 'https://open.spotify.com/track/' + t.sid : 'https://open.spotify.com/search/' + encodeURIComponent((t.a ? t.a + ' ' : '') + t.n); }\nconst embed = (sid, h) => `<iframe src=\"https://open.spotify.com/embed/track/${esc(sid)}?utm_source=generator&theme=0\" style=\"height:${h}px\" allow=\"autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture\" loading=\"lazy\"><\/iframe>`;\n\nlet tracks = LS.get('tracks', null);\nlet T = LS.get('tournament', null);\nlet view = 'menu', showAll = false, srcTab = FULL ? 'spotify' : 'files', msg = '';\nconst SPOT = '<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21Zm4.8 15.15a.66.66 0 0 1-.9.22c-2.48-1.51-5.6-1.86-9.27-1.02a.66.66 0 1 1-.3-1.28c4.02-.92 7.47-.52 10.25 1.18.31.19.41.6.22.9Zm1.28-2.85a.82.82 0 0 1-1.13.27c-2.84-1.75-7.17-2.25-10.53-1.23a.82.82 0 1 1-.48-1.57c3.84-1.17 8.61-.6 11.87 1.4.39.24.51.75.27 1.13Zm.11-2.97C14.79 8.8 9.17 8.6 5.92 9.6a.98.98 0 1 1-.57-1.88c3.73-1.13 9.94-.91 13.85 1.41a.98.98 0 0 1-1 1.69Z\"/><\/svg>';\nlet pending = [];\n\n/* ---------- Spotify login (full version only) ---------- */\n/* ---------- Auth (PKCE) ---------- */\nasync function login() {\n  const inp = document.getElementById('cid'); const cid = ((inp && inp.value) || (LS.get('cid', '') || DEFAULT_CLIENT_ID) || '').trim();\n  if (!cid) { document.getElementById('msg').textContent = 'Вставь Client ID'; return; }\n  LS.set('cid', cid);\n  const verifier = randStr(64), state = randStr(16);\n  LS.set('verifier', verifier); LS.set('state', state);\n  const p = new URLSearchParams({\n    response_type: 'code', client_id: cid, scope: SCOPES, state,\n    code_challenge_method: 'S256', code_challenge: await challenge(verifier), redirect_uri: REDIRECT_URI\n  });\n  location.href = 'https://accounts.spotify.com/authorize?' + p;\n}\nasync function handleCallback() {\n  const q = new URLSearchParams(location.search);\n  if (!q.has('code') && !q.has('error')) return null;\n  history.replaceState(null, '', REDIRECT_URI);\n  if (q.get('error')) return 'Spotify вернул ошибку: ' + q.get('error');\n  if (q.get('state') !== LS.get('state')) return 'Проверка state не прошла, попробуй войти ещё раз.';\n  const r = await fetch('https://accounts.spotify.com/api/token', {\n    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n    body: new URLSearchParams({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: REDIRECT_URI,\n      client_id: LS.get('cid', '') || DEFAULT_CLIENT_ID, code_verifier: LS.get('verifier') })\n  });\n  const j = await r.json();\n  if (!r.ok) return 'Ошибка получения токена: ' + (j.error_description || j.error);\n  saveTok(j); LS.del('verifier'); LS.del('state');\n  return null;\n}\nfunction saveTok(j) {\n  const old = LS.get('tok', {}) || {};\n  LS.set('tok', { access: j.access_token, refresh: j.refresh_token || old.refresh, exp: Date.now() + (j.expires_in - 60) * 1000 });\n}\nasync function token() {\n  const t = LS.get('tok', null);\n  if (!t) throw new Error('NOAUTH');\n  if (Date.now() < t.exp) return t.access;\n  const r = await fetch('https://accounts.spotify.com/api/token', {\n    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: t.refresh, client_id: LS.get('cid', '') || DEFAULT_CLIENT_ID })\n  });\n  const j = await r.json();\n  if (!r.ok) { LS.del('tok'); throw new Error('NOAUTH'); }\n  saveTok(j); return j.access_token;\n}\nasync function api(url) {\n  for (let tries = 0; tries < 6; tries++) {\n    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + await token() } });\n    if (r.status === 429) { await sleep((+r.headers.get('Retry-After') || 2) * 1000); continue; }\n    if (r.status === 401) { const t = LS.get('tok'); if (t) { t.exp = 0; LS.set('tok', t); } continue; }\n    if (!r.ok) throw new Error('Spotify API: ошибка ' + r.status);\n    return r.json();\n  }\n  throw new Error('Spotify не отвечает, попробуй позже');\n}\n\nasync function loadLiked() {\n  app.innerHTML = shell(`<div class=\"panel loader\"><h2>Загружаю лайки из Spotify…<\/h2><div class=\"mut\" id=\"lp\">Начинаю<\/div><div class=\"bar\"><div id=\"lb\" style=\"width:0\"><\/div><\/div><\/div>`);\n  let url = 'https://api.spotify.com/v1/me/tracks?limit=50';\n  const out = [];\n  while (url) {\n    const j = await api(url);\n    for (const it of j.items) {\n      const t = it.track;\n      if (!t || !t.id || t.is_local) continue;\n      const imgs = (t.album && t.album.images) || [];\n      const mid = imgs.find(i => i.width && i.width <= 320 && i.width >= 200) || imgs[imgs.length - 1] || {};\n      out.push({ n: t.name, a: (t.artists || []).map(x => x.name).join(', '), al: t.album ? t.album.name : '',\n        uri: t.uri, img: (imgs[0] || {}).url || '', thumb: mid.url || '', added: it.added_at });\n    }\n    const lp = document.getElementById('lp'), lb = document.getElementById('lb');\n    if (lp) lp.textContent = `${out.length} из ${j.total}`;\n    if (lb) lb.style.width = (j.total ? Math.min(100, (j.offset + j.items.length) / j.total * 100) : 100) + '%';\n    url = j.next;\n  }\n  setTracks(out, true);\n}\n\n/* ---------- Import from files / text ---------- */\nfunction parseCSV(text) {\n  const rows = []; let row = [], f = '', q = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (q) { if (c === '\"') { if (text[i + 1] === '\"') { f += '\"'; i++; } else q = false; } else f += c; }\n    else if (c === '\"') q = true;\n    else if (c === ',') { row.push(f); f = ''; }\n    else if (c === '\\n' || c === '\\r') { if (c === '\\r' && text[i + 1] === '\\n') i++; row.push(f); rows.push(row); row = []; f = ''; }\n    else f += c;\n  }\n  if (f || row.length) { row.push(f); rows.push(row); }\n  return rows.filter(r => r.some(x => x.trim()));\n}\nfunction fromCSV(text) {\n  const rows = parseCSV(text.replace(/^﻿/, ''));\n  if (rows.length < 2) throw new Error('в файле нет строк с треками');\n  const h = rows[0].map(x => x.trim().toLowerCase());\n  const col = (...names) => { for (const n of names) { let i = h.indexOf(n); if (i < 0) i = h.findIndex(x => x.includes(n) && !(n === 'name' && /album|artist|playlist|label/.test(x))); if (i >= 0) return i; } return -1; };\n  const iN = col('track name', 'name', 'title', 'название'), iA = col('artist name', 'artist', 'исполнитель'),\n        iAl = col('album name', 'album', 'альбом'), iU = col('track uri', 'uri', 'spotify id', 'url'),\n        iD = col('added at', 'date added'), iI = col('album image url', 'image');\n  if (iN < 0) throw new Error('не нашёл колонку с названием трека (Track Name)');\n  return rows.slice(1).map(r => ({ n: r[iN], a: iA >= 0 ? (r[iA] || '').replace(/\\\\,/g, ',') : '', al: iAl >= 0 ? r[iAl] : '',\n    uri: iU >= 0 ? r[iU] : '', added: iD >= 0 ? r[iD] : '', img: iI >= 0 ? r[iI] : '' })).filter(t => t.n);\n}\nfunction fromJSON(text) {\n  const j = JSON.parse(text);\n  const arr = Array.isArray(j) ? j : (j.tracks || j.items || []);\n  return arr.map(x => {\n    const t = x.track && typeof x.track === 'object' ? x.track : x;\n    return { n: t.track || t.name || t.trackName || '', a: t.artist || t.artistName || (t.artists ? t.artists.map(a => a.name || a).join(', ') : ''),\n      al: typeof t.album === 'string' ? t.album : (t.album && t.album.name) || '', uri: t.uri || '', added: x.added_at || '' };\n  }).filter(t => t.n);\n}\nfunction fromText(text) {\n  return text.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean).map(l => {\n    const sid = sidOf(l);\n    if (sid) return { n: 'Трек ' + sid.slice(0, 6), a: '', uri: 'spotify:track:' + sid };\n    const m = l.match(/^(.+?)\\s+[—–-]\\s+(.+)$/);\n    return m ? { a: m[1].trim(), n: m[2].trim() } : { a: '', n: l };\n  });\n}\nfunction setTracks(list, sortByAdded) {\n  const seen = new Set(), out = [];\n  for (const t of list) {\n    const sid = sidOf(t.uri);\n    const key = sid || ((t.a || '') + '|' + t.n).toLowerCase();\n    if (seen.has(key)) continue; seen.add(key);\n    out.push({ n: String(t.n).trim(), a: (t.a || '').trim(), al: (t.al || '').trim(), sid,\n      img: FULL ? (t.img || '') : '', thumb: FULL ? (t.thumb || t.img || '') : '', added: t.added || '' });\n  }\n  if (out.length < 2) throw new Error('нужно хотя бы 2 трека, нашёл ' + out.length);\n  if (sortByAdded && out.some(t => t.added)) out.sort((x, y) => (y.added || '').localeCompare(x.added || ''));\n  out.forEach((t, i) => t.id = 'x' + i);\n  tracks = out; LS.set('tracks', tracks); LS.set('tracksAt', Date.now());\n}\nasync function addFiles(files) {\n  msg = '';\n  for (const f of files) {\n    try {\n      const text = await f.text();\n      const list = (/\\.json$/i.test(f.name) || /^\\s*[\\[{]/.test(text)) ? fromJSON(text) : fromCSV(text);\n      if (!list.length) throw new Error('треков не найдено');\n      pending = pending.filter(p => p.name !== f.name).concat({ name: f.name, list });\n    } catch (e) { msg = `«${f.name}»: ${e.message}`; }\n  }\n  render();\n}\nfunction removeFile(i) { pending.splice(i, 1); render(); }\nfunction pendingCount() { const s = new Set(); pending.forEach(p => p.list.forEach(t => s.add(sidOf(t.uri) || ((t.a || '') + '|' + t.n).toLowerCase()))); return s.size; }\nfunction usePending() { try { setTracks(pending.flatMap(p => p.list), true); pending = []; msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }\nfunction importPasted() { try { setTracks(fromText(document.getElementById('paste').value), false); msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }\nfunction demo() { const d = []; for (let i = 1; i <= 16; i++) d.push({ a: 'Демо-артист ' + ((i % 5) + 1), n: 'Песня №' + i, al: 'Демо-альбом' }); setTracks(d, false); view = 'menu'; render(); }\nfunction forget() { ask('Удалить загруженный список и турнир?', () => { LS.del('tracks'); LS.del('tournament'); LS.del('tok'); tracks = null; T = null; view = 'import'; render(); }); }\n\n/* ---------- Tournament ---------- */\nfunction newTournament(ids) {\n  const n = ids.length;\n  let p = 1; while (p * 2 <= n) p *= 2;\n  const sh = shuffle(ids), meta = {};\n  const byId = Object.fromEntries(tracks.map(t => [t.id, t]));\n  ids.forEach(id => meta[id] = byId[id]);\n  const t = { n, p, cur: [], next: [], i: 0, stage: n, playIn: false, elim: [], done: 0, total: n - 1, hist: [], meta, winner: null };\n  if (n === p) t.cur = sh;\n  else { const k = n - p; t.cur = sh.slice(0, 2 * k); t.next = sh.slice(2 * k); t.playIn = true; }\n  return t;\n}\nfunction save() {\n  if (!LS.set('tournament', T)) { T.hist = T.hist.slice(-2); LS.set('tournament', T); }\n}\nfunction snapshot() { const { hist, meta, ...rest } = T; return JSON.stringify(rest); }\nfunction pick(side) {\n  if (!T || T.winner) return;\n  if (side < 0) side = Math.random() < .5 ? 0 : 1;\n  const a = T.cur[T.i], b = T.cur[T.i + 1];\n  T.hist.push(snapshot()); if (T.hist.length > 10) T.hist.shift();\n  const w = side ? b : a, l = side ? a : b;\n  T.next.push(w);\n  T.elim.push({ id: l, stage: T.stage, playIn: T.playIn });\n  T.i += 2; T.done++;\n  if (T.i >= T.cur.length) {\n    if (T.next.length === 1) T.winner = T.next[0];\n    else { T.cur = shuffle(T.next); T.next = []; T.i = 0; T.stage = T.cur.length; T.playIn = false; }\n  }\n  save(); render();\n}\nfunction undo() {\n  if (!T || !T.hist.length) return;\n  const s = JSON.parse(T.hist.pop());\n  T = { ...s, hist: T.hist, meta: T.meta };\n  save(); render();\n}\nfunction stageName() {\n  if (T.playIn) return `Отборочный раунд (до ${T.p})`;\n  const s = T.stage;\n  return s === 2 ? 'Финал' : s === 4 ? 'Полуфинал' : s === 8 ? 'Четвертьфинал' : `1/${s / 2} финала`;\n}\nfunction ranking() {\n  const r = [{ id: T.winner, label: '🏆 Победитель' }];\n  const el = T.elim.slice().sort((x, y) => (x.playIn - y.playIn) || (x.stage - y.stage));\n  for (const e of el) r.push({ id: e.id, label: e.playIn ? 'отбор' : e.stage === 2 ? '2 место' : `топ-${e.stage}` });\n  return r;\n}\nconst tr = id => (T && T.meta[id]) || { id, n: '(трек не найден)', a: '', al: '', img: '', big: '' };\n\n\n/* ---------- UI helpers ---------- */\nfunction shell(inner, right = '') {\n  return `<header><div class=\"logo\"><div class=\"dot\">♥<\/div><div><h1>Liked Songs Battle<\/h1><div class=\"sub\">Выбери любимый трек из своих лайков<\/div><\/div><\/div><div class=\"row\">${right}<\/div><\/header>${inner}`;\n}\nfunction ask(text, yes) {\n  const m = document.createElement('div'); m.className = 'modal';\n  m.innerHTML = `<div class=\"panel\"><div style=\"margin-bottom:16px\">${esc(text)}<\/div><div class=\"row\"><button class=\"pri\" id=\"mY\">Да<\/button><button id=\"mN\">Отмена<\/button><\/div><\/div>`;\n  document.body.appendChild(m);\n  m.querySelector('#mY').onclick = () => { m.remove(); yes(); };\n  m.querySelector('#mN').onclick = () => m.remove();\n  m.onclick = e => { if (e.target === m) m.remove(); };\n}\nfunction copy(text, btn) {\n  try { navigator.clipboard.writeText(text).then(() => btn.textContent = 'Скопировано ✓', () => btn.textContent = 'Не вышло скопировать'); }\n  catch { btn.textContent = 'Не вышло скопировать'; }\n}\nfunction art(t, cls, big) {\n  const src = big ? (t.img || t.thumb) : (t.thumb || t.img);\n  if (FULL && src) return `<img class=\"${cls}\" src=\"${esc(src)}\" alt=\"\" ${cls === 'cover' ? 'onclick=\"this.dataset.side&&pick(+this.dataset.side)\"' : ''}>`;\n  return `<div class=\"${cls}\" style=\"${grad(t)}\">${esc(cls === 'sq' ? initials(t)[0] : initials(t))}<\/div>`;\n}\n\n\n/* ---------- Share image ---------- */\nlet DL = null;\nif (!FULL && window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then(d => { DL = d; }).catch(() => {});\nconst FONT = 'system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif';\nfunction loadImg(src) {\n  return new Promise(res => {\n    if (!src) return res(null);\n    const im = new Image(); let done = false;\n    const end = v => { if (!done) { done = true; res(v); } };\n    im.crossOrigin = 'anonymous';\n    im.onload = () => end(im); im.onerror = () => end(null);\n    setTimeout(() => end(null), 5000);\n    im.src = src;\n  });\n}\nasync function coverFor(t) {\n  if (!FULL) return null;\n  let src = t.img || t.thumb;\n  if (!src && t.sid) {\n    try {\n      const r = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent('https://open.spotify.com/track/' + t.sid));\n      if (r.ok) src = (await r.json()).thumbnail_url;\n    } catch {}\n  }\n  return loadImg(src);\n}\nfunction rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }\nfunction fit(ctx, text, maxW) {\n  text = String(text || '');\n  if (ctx.measureText(text).width <= maxW) return text;\n  let s = text; while (s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);\n  return s.trimEnd() + '…';\n}\nfunction wrap2(ctx, text, maxW) {\n  if (ctx.measureText(text).width <= maxW) return [text];\n  const words = text.split(/\\s+/); let line = '';\n  for (let i = 0; i < words.length; i++) {\n    const test = line ? line + ' ' + words[i] : words[i];\n    if (ctx.measureText(test).width > maxW && line) return [line, fit(ctx, words.slice(i).join(' '), maxW)];\n    line = test;\n  }\n  return [fit(ctx, line, maxW)];\n}\nfunction drawArt(ctx, img, t, x, y, s, r) {\n  ctx.save(); rrect(ctx, x, y, s, s, r); ctx.clip();\n  if (img) ctx.drawImage(img, x, y, s, s);\n  else {\n    const h = hash(t.a + '|' + t.al), h1 = h % 360, h2 = (h1 + 40 + (h >> 9) % 80) % 360;\n    const g = ctx.createLinearGradient(x, y, x + s, y + s);\n    g.addColorStop(0, `hsl(${h1},55%,40%)`); g.addColorStop(1, `hsl(${h2},60%,20%)`);\n    ctx.fillStyle = g; ctx.fillRect(x, y, s, s);\n    ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';\n    ctx.font = `800 ${Math.round(s * .3)}px ${FONT}`; ctx.fillText(initials(t), x + s / 2, y + s / 2 + s * .02);\n    ctx.textBaseline = 'alphabetic';\n  }\n  ctx.restore();\n}\nasync function makeShareImage() {\n  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;\n  const ctx = c.getContext('2d');\n  const r = ranking(), w = tr(T.winner), rest = r.slice(1, 5).map(x => ({ t: tr(x.id), label: x.label }));\n  const [wImg, ...rImgs] = await Promise.all([coverFor(w), ...rest.map(x => coverFor(x.t))]);\n  ctx.fillStyle = '#0b0b0c'; ctx.fillRect(0, 0, W, H);\n  const gl = ctx.createRadialGradient(W / 2, 60, 40, W / 2, 60, 820);\n  gl.addColorStop(0, 'rgba(29,185,84,.32)'); gl.addColorStop(1, 'rgba(29,185,84,0)');\n  ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);\n  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';\n  ctx.fillStyle = '#1db954'; ctx.font = `800 24px ${FONT}`;\n  ctx.fillText('L I K E D   S O N G S   B A T T L E', W / 2, 80);\n  ctx.fillStyle = '#f4f4f5'; ctx.font = `800 52px ${FONT}`;\n  ctx.fillText('🏆 Мой любимый трек', W / 2, 146);\n  const S = 480, cx = (W - S) / 2, cy = 190;\n  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 18; ctx.fillStyle = '#000'; rrect(ctx, cx, cy, S, S, 28); ctx.fill(); ctx.restore();\n  drawArt(ctx, wImg, w, cx, cy, S, 28);\n  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f4f5'; ctx.font = `800 56px ${FONT}`;\n  const lines = wrap2(ctx, w.n, W - 140); let y = cy + S + 82;\n  lines.forEach(l => { ctx.fillText(l, W / 2, y); y += 64; });\n  ctx.fillStyle = '#b5b5bd'; ctx.font = `500 34px ${FONT}`; ctx.fillText(fit(ctx, w.a, W - 160), W / 2, y);\n  ctx.fillStyle = '#7c7c85'; ctx.font = `500 25px ${FONT}`; ctx.fillText(`победил среди ${T.n} треков · ${T.total} выборов`, W / 2, y + 44);\n  const ly = y + 84;\n  if (rest.length) {\n    const boxH = H - ly - 64;\n    ctx.fillStyle = 'rgba(255,255,255,.045)'; rrect(ctx, 70, ly, W - 140, boxH, 24); ctx.fill();\n    const rowH = Math.min(80, (boxH - 24) / rest.length), s = Math.max(30, Math.min(54, rowH - 16));\n    rest.forEach((x, i) => {\n      const ry = ly + 12 + i * rowH + (rowH - s) / 2, mid = ry + s / 2;\n      ctx.textAlign = 'left'; ctx.fillStyle = '#7c7c85'; ctx.font = `700 26px ${FONT}`; ctx.fillText(String(i + 2), 102, mid + 9);\n      drawArt(ctx, rImgs[i], x.t, 142, ry, s, 8);\n      ctx.textAlign = 'left'; ctx.fillStyle = '#f4f4f5'; ctx.font = `700 26px ${FONT}`; ctx.fillText(fit(ctx, x.t.n, 560), 142 + s + 20, mid - 3);\n      ctx.fillStyle = '#9b9ba3'; ctx.font = `500 21px ${FONT}`; ctx.fillText(fit(ctx, x.t.a, 560), 142 + s + 20, mid + 24);\n      ctx.textAlign = 'right'; ctx.fillStyle = '#9b9ba3'; ctx.font = `600 21px ${FONT}`; ctx.fillText(x.label, W - 102, mid + 8);\n    });\n  }\n  ctx.textAlign = 'center'; ctx.fillStyle = '#55555c'; ctx.font = `500 21px ${FONT}`;\n  ctx.fillText(new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, H - 26);\n  return new Promise(res => c.toBlob(res, 'image/png'));\n}\nlet shareBlob = null, shareURL = null;\nasync function openShare() {\n  closeShare();\n  const m = document.createElement('div'); m.className = 'modal'; m.id = 'shareModal';\n  m.innerHTML = `<div class=\"panel wide\"><div class=\"row\" style=\"margin-bottom:12px\"><h2>Картинка с результатом<\/h2><span class=\"spacer\"><\/span><button class=\"ghost\" onclick=\"closeShare()\">✕<\/button><\/div><div class=\"shareimg\" style=\"display:grid;place-items:center\" id=\"shBox\"><span class=\"mut\">Рисую…<\/span><\/div><div class=\"row\" id=\"shBtns\" style=\"margin-top:14px\"><\/div><div class=\"mut small\" id=\"shMsg\" style=\"margin-top:10px\"><\/div><\/div>`;\n  m.onclick = e => { if (e.target === m) closeShare(); };\n  document.body.appendChild(m);\n  try { shareBlob = await makeShareImage(); } catch (e) { console.error(e); shareBlob = null; }\n  if (!document.getElementById('shareModal')) return;\n  if (!shareBlob) { document.getElementById('shBox').innerHTML = '<span class=\"err\">Не получилось нарисовать картинку<\/span>'; return; }\n  if (shareURL) URL.revokeObjectURL(shareURL);\n  shareURL = URL.createObjectURL(shareBlob);\n  document.getElementById('shBox').outerHTML = `<img class=\"shareimg\" src=\"${shareURL}\" alt=\"Результат\">`;\n  const file = new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' });\n  const btns = [];\n  let canNative = false; try { canNative = FULL && !!navigator.canShare && navigator.canShare({ files: [file] }); } catch {}\n  if (canNative) btns.push(`<button class=\"pri\" onclick=\"shareNative()\">Поделиться<\/button>`);\n  if (FULL || DL) btns.push(`<button class=\"${btns.length ? '' : 'pri'}\" onclick=\"saveShare()\">Сохранить PNG<\/button>`);\n  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) btns.push(`<button onclick=\"copyShare(this)\">Копировать картинку<\/button>`);\n  document.getElementById('shBtns').innerHTML = btns.join('');\n  shMsg(btns.length ? '' : 'Сохрани картинку: правый клик или долгое нажатие → «Сохранить изображение».');\n}\nfunction closeShare() { const m = document.getElementById('shareModal'); if (m) m.remove(); }\nfunction shMsg(s) { const e = document.getElementById('shMsg'); if (e) e.textContent = s; }\nasync function shareNative() {\n  const w = tr(T.winner);\n  try { await navigator.share({ files: [new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' })], title: 'Мой любимый трек', text: `Мой любимый трек из лайков: ${w.a ? w.a + ' — ' : ''}${w.n}` }); }\n  catch (e) { if (e.name !== 'AbortError') shMsg('Не получилось открыть меню «Поделиться» — сохрани PNG.'); }\n}\nasync function saveShare() {\n  if (FULL) { const a = document.createElement('a'); a.href = shareURL; a.download = 'my-favorite-song.png'; document.body.appendChild(a); a.click(); a.remove(); shMsg('Сохранено ✓'); return; }\n  try { await DL.save({ filename: 'my-favorite-song.png', data: shareBlob }); shMsg('Сохранено ✓'); }\n  catch (e) { shMsg(e && e.code === 'declined' ? 'Сохранение отменено.' : 'Здесь сохранить не вышло — правый клик или долгое нажатие на картинке → «Сохранить изображение».'); }\n}\nasync function copyShare(btn) {\n  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); btn.textContent = 'Скопировано ✓'; shMsg('Теперь вставь в любой чат (Ctrl+V).'); }\n  catch { btn.textContent = 'Не вышло'; shMsg('Копирование картинок здесь заблокировано — сохрани PNG.'); }\n}\nasync function getFull(btn) {\n  if (!DL) { msg = 'Скачивание недоступно в этом окне — попроси файл spotify-battle.html у Claude в чате.'; render(); return; }\n  try { await DL.save({ filename: 'spotify-battle.html', data: FULL_SRC }); btn.textContent = 'Скачано ✓'; }\n  catch (e) { if (!(e && e.code === 'declined')) { msg = 'Не вышло скачать: ' + ((e && e.message) || 'ошибка'); render(); } }\n}\nconst FULL_SRC = \"\";\n\n/* ---------- Views ---------- */\nfunction viewImport() {\n  const tabs = [['spotify', 'Войти через Spotify'], ['files', 'CSV / JSON файлы'], ['text', 'Вставить списком']];\n  const seg = `<div class=\"seg\">${tabs.map(([k, l]) => `<button class=\"${srcTab === k ? 'act' : ''}\" onclick=\"srcTab='${k}';msg='';render()\">${l}<\/button>`).join('')}<\/div>`;\n  let body = '';\n  if (srcTab === 'spotify' && !FULL) {\n    body = `\n      <div style=\"text-align:center;padding:10px 0 4px\">\n        <div class=\"mut\" style=\"max-width:560px;margin:0 auto 18px\">Войти через Spotify прямо здесь нельзя: страница работает в изолированной среде, и сервера Spotify для неё закрыты. Скачай полную версию — это один HTML-файл с кнопкой входа, обложками и отрывками треков.<\/div>\n        <button class=\"pri big spot\" onclick=\"getFull(this)\">${SPOT}Скачать полную версию с входом через Spotify<\/button>\n        <div class=\"mut small\" style=\"margin-top:14px\">Как запустить: положи файл в папку → в ней <code>python -m http.server 8000 --bind 127.0.0.1<\/code> → открой <code>http://127.0.0.1:8000/spotify-battle.html<\/code><\/div>\n        ${msg ? `<div class=\"err\">${esc(msg)}<\/div>` : ''}\n      <\/div>`;\n  } else if (srcTab === 'spotify') {\n    const fileWarn = location.protocol === 'file:' ? `<div class=\"err\" style=\"margin:0 0 14px\">Страница открыта как файл, так вход не сработает. Запусти в папке с файлом <code>python -m http.server 8000 --bind 127.0.0.1<\/code> и открой <code>http://127.0.0.1:8000/${esc(location.pathname.split('/').pop())}<\/code>. CSV-файлы работают и так.<\/div>` : '';\n    const cid = (LS.get('cid', '') || DEFAULT_CLIENT_ID);\n    body = `${fileWarn}\n      ${cid ? `<div style=\"text-align:center;padding:12px 0 6px\"><button class=\"pri big spot\" onclick=\"login()\">${SPOT}Войти через Spotify<\/button><\/div>` : ''}\n      <div id=\"msg\" class=\"err\" style=\"text-align:center\">${esc(msg)}<\/div>\n      <details ${cid ? '' : 'open'}><summary>${cid ? 'Настройки приложения Spotify' : 'Первый запуск: подключи своё приложение Spotify (~2 минуты, один раз)'}<\/summary>\n        <ol class=\"steps\" style=\"margin-top:12px\">\n          <li>Открой <a href=\"https://developer.spotify.com/dashboard\" target=\"_blank\" rel=\"noopener\">developer.spotify.com/dashboard<\/a> → <b>Create app<\/b>.<\/li>\n          <li>В <b>Redirect URIs<\/b> вставь ровно: <code>${esc(REDIRECT_URI)}<\/code> <button class=\"ghost small\" style=\"padding:3px 10px\" onclick=\"copy('${esc(REDIRECT_URI)}',this)\">Копировать<\/button><\/li>\n          <li>Отметь <b>Web API<\/b>, сохрани и вставь <b>Client ID<\/b> сюда:<\/li>\n        <\/ol>\n        <div class=\"row\"><input id=\"cid\" placeholder=\"Client ID\" style=\"flex:1;min-width:240px\" value=\"${esc(cid)}\"><button class=\"${cid ? '' : 'pri'}\" onclick=\"login()\">${cid ? 'Сохранить и войти' : 'Войти через Spotify'}<\/button><\/div>\n        <div class=\"mut small\" style=\"margin-top:10px\">Доступ только на чтение лайков. Всё хранится у тебя в браузере. Дальше вход — одной кнопкой.<\/div>\n      <\/details>`;\n  } else if (srcTab === 'files') {\n    body = `\n      <ol class=\"steps\">\n        <li>Открой <a href=\"https://exportify.app\" target=\"_blank\" rel=\"noopener\">exportify.app<\/a> и войди через Spotify.<\/li>\n        <li>Нажми <b>Export<\/b> у <b>Liked Songs<\/b> (и у любых других плейлистов, если хочешь их добавить).<\/li>\n        <li>Перетащи сюда один или сразу несколько CSV. Подойдёт и <code>YourLibrary.json<\/code> из экспорта данных Spotify.<\/li>\n      <\/ol>\n      <label class=\"drop\" id=\"drop\">\n        <input type=\"file\" accept=\".csv,.json,text/csv,application/json\" multiple hidden id=\"fi\">\n        <div class=\"ic\">⤓<\/div><b>Перетащи файлы сюда<\/b><div class=\"mut small\">или нажми, чтобы выбрать — можно несколько .csv / .json<\/div>\n      <\/label>\n      ${pending.length ? `<ul class=\"files\">${pending.map((p, i) => `<li><span>📄<\/span><span class=\"fn\">${esc(p.name)}<\/span><span class=\"mut small\">${p.list.length} тр.<\/span><button class=\"x ghost\" onclick=\"removeFile(${i})\">✕<\/button><\/li>`).join('')}<\/ul>\n        <div class=\"row\" style=\"margin-top:16px\"><span class=\"mut\">Всего уникальных: <b style=\"color:var(--fg)\">${pendingCount()}<\/b><\/span><span class=\"spacer\"><\/span><button class=\"pri\" onclick=\"usePending()\">Готово →<\/button><\/div>` : ''}\n      ${msg ? `<div class=\"err\">${esc(msg)}<\/div>` : ''}`;\n  } else {\n    body = `\n      <div class=\"mut\" style=\"margin-bottom:10px\">Каждая строка — один трек: <b style=\"color:var(--fg)\">Исполнитель — Название<\/b>${FULL ? ' или ссылка на трек в Spotify' : ''}.<\/div>\n      <textarea id=\"paste\" placeholder=\"Кино — Группа крови&#10;Radiohead — Creep\"><\/textarea>\n      <div class=\"row\" style=\"margin-top:14px\"><span class=\"spacer\"><\/span><button class=\"pri\" onclick=\"importPasted()\">Загрузить список<\/button><\/div>\n      ${msg ? `<div class=\"err\">${esc(msg)}<\/div>` : ''}`;\n  }\n  const limit = FULL || srcTab === 'spotify' ? '' : `<div class=\"note\" style=\"margin-top:20px\">Здесь нет обложек, отрывков и входа через Spotify: страница работает в изолированной среде, где запросы к Spotify заблокированы. Всё это есть в версии-файле <b>spotify-battle.html<\/b>.<\/div>`;\n  app.innerHTML = shell(`\n    <div class=\"panel\"><h2>Загрузи свои лайки<\/h2><div class=\"mut small\">Выбери способ — потом начнётся турнир: из каждой пары оставляешь один трек, пока не останется победитель.<\/div>\n      ${seg}${body}${limit}\n    <\/div>\n    <div class=\"mut small\">Файлы читаются прямо в браузере и никуда не отправляются · <a href=\"#\" onclick=\"demo();return false\">попробовать на демо-списке<\/a><\/div>`,\n    tracks ? `<button onclick=\"view='menu';msg='';render()\">← Назад<\/button>` : '');\n  const fi = document.getElementById('fi'), dr = document.getElementById('drop');\n  if (fi) {\n    fi.onchange = () => { addFiles([...fi.files]); fi.value = ''; };\n    dr.ondragover = e => { e.preventDefault(); dr.classList.add('on'); };\n    dr.ondragleave = () => dr.classList.remove('on');\n    dr.ondrop = e => { e.preventDefault(); dr.classList.remove('on'); addFiles([...e.dataTransfer.files]); };\n  }\n  const cid = document.getElementById('cid');\n  if (cid) cid.onkeydown = e => { if (e.key === 'Enter') login(); };\n}\n\nfunction viewMenu() {\n  if (!tracks) return viewImport();\n  const n = tracks.length, at = LS.get('tracksAt', 0);\n  let cont = '';\n  if (T && !T.winner) cont = `<div class=\"panel row\"><div><h2>Незаконченный турнир<\/h2><div class=\"mut\">${T.n} треков · сыграно ${T.done} из ${T.total}<\/div><\/div><span class=\"spacer\"><\/span><button class=\"pri\" onclick=\"view='battle';render()\">Продолжить →<\/button><\/div>`;\n  else if (T && T.winner) { const w = tr(T.winner); cont = `<div class=\"panel row\"><div><div class=\"crown\">Прошлый победитель<\/div><b>${esc(w.n)}<\/b> <span class=\"mut\">${esc(w.a)}<\/span><\/div><span class=\"spacer\"><\/span><button onclick=\"view='battle';render()\">Результаты<\/button><\/div>`; }\n  const right = `${FULL ? (LS.get('tok', null) ? `<button onclick=\"refresh()\">↻ Обновить из Spotify<\/button>` : `<button class=\"spot\" onclick=\"srcTab='spotify';msg='';view='import';render()\">${SPOT}Войти через Spotify<\/button>`) : ''}<button onclick=\"msg='';view='import';render()\">Другой список<\/button><button class=\"ghost\" onclick=\"forget()\">Выйти<\/button>`;\n  app.innerHTML = shell(`\n    ${msg ? `<div class=\"err\" style=\"margin:0 0 12px\">${esc(msg)}<\/div>` : ''}\n    ${cont}\n    <div class=\"panel\">\n      <div class=\"row\"><div><div class=\"stat\">${n}<\/div><div class=\"mut small\">треков загружено${at ? ' · ' + new Date(at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}<\/div><\/div><\/div>\n      <div class=\"opts\">\n        <label class=\"opt\"><input type=\"radio\" name=\"pool\" value=\"all\" checked><b>Все треки<\/b><span class=\"mut small\">${n} шт.<\/span><\/label>\n        <label class=\"opt\"><input type=\"radio\" name=\"pool\" value=\"recent\"><b>Последние<\/b><span class=\"mut small\">недавно лайкнутые<\/span><\/label>\n        <label class=\"opt\"><input type=\"radio\" name=\"pool\" value=\"random\"><b>Случайные<\/b><span class=\"mut small\">случайная выборка<\/span><\/label>\n      <\/div>\n      <div class=\"row\" id=\"nrow\">Сколько треков: <input type=\"number\" id=\"N\" min=\"2\" max=\"${n}\" value=\"${Math.min(64, n)}\"><\/div>\n      <div class=\"row\" style=\"margin-top:18px\"><span class=\"mut\" id=\"est\"><\/span><span class=\"spacer\"><\/span><button class=\"pri\" onclick=\"start()\">Начать турнир →<\/button><\/div>\n    <\/div>\n    <div class=\"mut small\">Управление: <span class=\"kbd\">←<\/span> левый · <span class=\"kbd\">→<\/span> правый · <span class=\"kbd\">↓<\/span> не могу выбрать · <span class=\"kbd\">Z<\/span> отменить<\/div>`, right);\n  const upd = () => {\n    const mode = document.querySelector('input[name=pool]:checked').value;\n    document.getElementById('nrow').style.display = mode === 'all' ? 'none' : 'flex';\n    const k = mode === 'all' ? n : Math.max(2, Math.min(n, +document.getElementById('N').value || 2));\n    document.getElementById('est').textContent = `${k - 1} выборов · примерно ${Math.max(1, Math.round((k - 1) * 6 / 60))} мин`;\n  };\n  app.querySelectorAll('input').forEach(i => i.addEventListener('input', upd)); upd();\n}\n\nfunction start() {\n  const mode = document.querySelector('input[name=pool]:checked').value, n = tracks.length;\n  const k = mode === 'all' ? n : Math.max(2, Math.min(n, +document.getElementById('N').value || 2));\n  const go = () => {\n    let ids = tracks.map(t => t.id);\n    if (mode === 'recent') ids = ids.slice(0, k);\n    if (mode === 'random') ids = shuffle(ids).slice(0, k);\n    T = newTournament(ids); save(); view = 'battle'; render();\n  };\n  if (T && !T.winner) ask('Начать заново? Незаконченный турнир пропадёт.', go); else go();\n}\n\nfunction card(t, side) {\n  let visual, player = '';\n  if (FULL && (t.img || t.thumb)) { visual = art(t, 'cover', true).replace('<img', `<img data-side=\"${side}\"`); if (t.sid) player = embed(t.sid, 80); }\n  else if (FULL && t.sid) { visual = ''; player = embed(t.sid, 352); }\n  else visual = `<div class=\"cover\" style=\"${grad(t)}\" onclick=\"pick(${side})\">${esc(initials(t))}<\/div>`;\n  const listen = FULL && t.sid ? '' : `<a class=\"listen\" href=\"${esc(spUrl(t))}\" target=\"_blank\" rel=\"noopener\">▶ Слушать в Spotify<\/a>`;\n  return `<div class=\"card\">${visual}${player}\n    <div class=\"meta\"><div class=\"tname\">${esc(t.n)}<\/div><div class=\"tart\">${esc(t.a)}<\/div><div class=\"tal\">${esc(t.al)}<\/div><\/div>\n    ${listen}<button class=\"pri pick\" onclick=\"pick(${side})\">${side ? 'Этот →' : '← Этот'}<\/button><\/div>`;\n}\n\nfunction viewBattle() {\n  const a = tr(T.cur[T.i]), b = tr(T.cur[T.i + 1]);\n  app.innerHTML = shell(`\n    <div class=\"stage\"><b>${stageName()}<\/b><span class=\"mut\">пара ${T.i / 2 + 1} из ${T.cur.length / 2}<\/span><span class=\"spacer\"><\/span><span class=\"mut small\">${T.done} / ${T.total}<\/span><\/div>\n    <div class=\"bar\" style=\"margin-top:10px\"><div style=\"width:${T.done / T.total * 100}%\"><\/div><\/div>\n    <div class=\"vs\">${card(a, 0)}<div class=\"vsmark\"><span>VS<\/span><\/div>${card(b, 1)}<\/div>\n    <div class=\"center\"><button class=\"ghost\" onclick=\"pick(-1)\">Не могу выбрать — случайно<\/button><\/div>`,\n    `<button onclick=\"undo()\" ${T.hist.length ? '' : 'disabled'}>↶ Отменить<\/button><button onclick=\"view='menu';render()\">Меню<\/button>`);\n}\n\nfunction viewResult() {\n  const w = tr(T.winner), r = ranking(), list = showAll ? r : r.slice(0, 32);\n  const wArt = FULL && (w.img || w.thumb) ? art(w, 'cover', true) : (FULL && w.sid ? '' : `<div class=\"cover\" style=\"${grad(w)}\">${esc(initials(w))}<\/div>`);\n  const wPlay = FULL && w.sid ? embed(w.sid, wArt ? 152 : 352).replace(/style=\"height:\\d+px\"/, `style=\"height:${wArt ? 152 : 352}px\"`) : `<a href=\"${esc(spUrl(w))}\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-block;margin-top:12px\">▶ Открыть в Spotify<\/a>`;\n  app.innerHTML = shell(`\n    <div class=\"panel winner\" style=\"${wArt ? '' : 'grid-template-columns:1fr'}\">\n      ${wArt}\n      <div><div class=\"crown\">🏆 Твой любимый трек<\/div>\n        <div class=\"tname\" style=\"font-size:28px;margin-top:6px\">${esc(w.n)}<\/div>\n        <div class=\"tart\" style=\"font-size:17px\">${esc(w.a)}<\/div>\n        <div class=\"tal\">${w.al ? esc(w.al) + ' · ' : ''}победил среди ${T.n} треков<\/div>\n        ${wPlay}\n      <\/div>\n    <\/div>\n    <div class=\"panel\">\n      <div class=\"row\" style=\"margin-bottom:6px\"><h2>Итоговая таблица<\/h2><span class=\"spacer\"><\/span><button onclick=\"undo()\" ${T.hist.length ? '' : 'disabled'}>↶ Переиграть последний выбор<\/button><\/div>\n      <div class=\"mut small\" style=\"margin-bottom:10px\">«топ-8» — трек дошёл до четвертьфинала. Внутри одной группы порядок условный.<\/div>\n      <ol class=\"rank\">${list.map((x, i) => { const t = tr(x.id); return `<li><span class=\"num\">${i + 1}<\/span>${art(t, 'sq')}<div class=\"t\"><div>${esc(t.n)}<\/div><div class=\"mut small\">${esc(t.a)}<\/div><\/div><span class=\"pill ${i === 0 ? 'g' : ''}\">${x.label.replace('🏆 ', '')}<\/span><\/li>`; }).join('')}<\/ol>\n      ${r.length > 32 && !showAll ? `<div class=\"center\"><button onclick=\"showAll=true;render()\">Показать все ${r.length}<\/button><\/div>` : ''}\n    <\/div>`,\n    `<button class=\"pri\" onclick=\"openShare()\">📸 Картинка с результатом<\/button><button onclick=\"copyTop(this)\">Скопировать топ<\/button><button onclick=\"view='menu';render()\">Новый турнир<\/button>`);\n}\nfunction copyTop(btn) {\n  copy(ranking().slice(0, 32).map((x, i) => { const t = tr(x.id); return `${i + 1}. ${t.a ? t.a + ' — ' : ''}${t.n} (${x.label.replace('🏆 ', '')})`; }).join('\\n'), btn);\n}\n\nasync function refresh() { try { await loadLiked(); msg = ''; view = 'menu'; render(); } catch (e) { handleErr(e); } }\nfunction handleErr(e) {\n  console.error(e);\n  msg = e.message === 'NOAUTH' ? 'Сессия Spotify истекла, войди снова.' : e.message;\n  if (e.message === 'NOAUTH' || !tracks) { srcTab = 'spotify'; view = 'import'; }\n  render();\n}\nfunction render() {\n  if (view === 'import' || !tracks) viewImport();\n  else if (view === 'battle' && T) (T.winner ? viewResult : viewBattle)();\n  else viewMenu();\n  window.scrollTo(0, 0);\n}\ndocument.addEventListener('keydown', e => {\n  if (e.key === 'Escape') closeShare();\n  if (view !== 'battle' || !T || ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.querySelector('.modal')) return;\n  if (!T.winner && e.key === 'ArrowLeft') { e.preventDefault(); pick(0); }\n  else if (!T.winner && e.key === 'ArrowRight') { e.preventDefault(); pick(1); }\n  else if (!T.winner && e.key === 'ArrowDown') { e.preventDefault(); pick(-1); }\n  else if (['z', 'Z', 'я', 'Я', 'Backspace'].includes(e.key)) { e.preventDefault(); undo(); }\n});\n\n(async () => {\n  if (FULL) {\n    let m = null;\n    try { m = await handleCallback(); } catch (e) { m = String(e.message || e); }\n    if (m) { msg = m; srcTab = 'spotify'; view = 'import'; render(); return; }\n    if (LS.get('tok', null) && new URLSearchParams(location.search).size === 0 && sessionStorage.getItem('justLogged')) { sessionStorage.removeItem('justLogged'); return refresh(); }\n  }\n  render();\n})();\n<\/script>\n<\/body>\n<\/html>\n";
+
+/* ---------- Views ---------- */
+function viewImport() {
+  const tabs = [['spotify', 'Войти через Spotify'], ['files', 'CSV / JSON файлы'], ['text', 'Вставить списком']];
+  const seg = `<div class="seg">${tabs.map(([k, l]) => `<button class="${srcTab === k ? 'act' : ''}" onclick="srcTab='${k}';msg='';render()">${l}</button>`).join('')}</div>`;
+  let body = '';
+  if (srcTab === 'spotify' && !FULL) {
+    body = `
+      <div style="text-align:center;padding:10px 0 4px">
+        <div class="mut" style="max-width:560px;margin:0 auto 18px">Войти через Spotify прямо здесь нельзя: страница работает в изолированной среде, и сервера Spotify для неё закрыты. Скачай полную версию — это один HTML-файл с кнопкой входа, обложками и отрывками треков.</div>
+        <button class="pri big spot" onclick="getFull(this)">${SPOT}Скачать полную версию с входом через Spotify</button>
+        <div class="mut small" style="margin-top:14px">Как запустить: положи файл в папку → в ней <code>python -m http.server 8000 --bind 127.0.0.1</code> → открой <code>http://127.0.0.1:8000/spotify-battle.html</code></div>
+        ${msg ? `<div class="err">${esc(msg)}</div>` : ''}
+      </div>`;
+  } else if (srcTab === 'spotify') {
+    const fileWarn = location.protocol === 'file:' ? `<div class="err" style="margin:0 0 14px">Страница открыта как файл, так вход не сработает. Запусти в папке с файлом <code>python -m http.server 8000 --bind 127.0.0.1</code> и открой <code>http://127.0.0.1:8000/${esc(location.pathname.split('/').pop())}</code>. CSV-файлы работают и так.</div>` : '';
+    const cid = (LS.get('cid', '') || DEFAULT_CLIENT_ID);
+    body = `${fileWarn}
+      ${cid ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="login()">${SPOT}Войти через Spotify</button></div>` : ''}
+      <div id="msg" class="err" style="text-align:center">${esc(msg)}</div>
+      <details ${cid ? '' : 'open'}><summary>${cid ? 'Настройки приложения Spotify' : 'Первый запуск: подключи своё приложение Spotify (~2 минуты, один раз)'}</summary>
+        <ol class="steps" style="margin-top:12px">
+          <li>Открой <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> → <b>Create app</b>.</li>
+          <li>В <b>Redirect URIs</b> вставь ровно: <code>${esc(REDIRECT_URI)}</code> <button class="ghost small" style="padding:3px 10px" onclick="copy('${esc(REDIRECT_URI)}',this)">Копировать</button></li>
+          <li>Отметь <b>Web API</b>, сохрани и вставь <b>Client ID</b> сюда:</li>
+        </ol>
+        <div class="row"><input id="cid" placeholder="Client ID" style="flex:1;min-width:240px" value="${esc(cid)}"><button class="${cid ? '' : 'pri'}" onclick="login()">${cid ? 'Сохранить и войти' : 'Войти через Spotify'}</button></div>
+        <div class="mut small" style="margin-top:10px">Доступ только на чтение лайков. Всё хранится у тебя в браузере. Дальше вход — одной кнопкой.</div>
+      </details>`;
+  } else if (srcTab === 'files') {
+    body = `
+      <ol class="steps">
+        <li>Открой <a href="https://exportify.app" target="_blank" rel="noopener">exportify.app</a> и войди через Spotify.</li>
+        <li>Нажми <b>Export</b> у <b>Liked Songs</b> (и у любых других плейлистов, если хочешь их добавить).</li>
+        <li>Перетащи сюда один или сразу несколько CSV. Подойдёт и <code>YourLibrary.json</code> из экспорта данных Spotify.</li>
+      </ol>
+      <label class="drop" id="drop">
+        <input type="file" accept=".csv,.json,text/csv,application/json" multiple hidden id="fi">
+        <div class="ic">⤓</div><b>Перетащи файлы сюда</b><div class="mut small">или нажми, чтобы выбрать — можно несколько .csv / .json</div>
+      </label>
+      ${pending.length ? `<ul class="files">${pending.map((p, i) => `<li><span>📄</span><span class="fn">${esc(p.name)}</span><span class="mut small">${p.list.length} тр.</span><button class="x ghost" onclick="removeFile(${i})">✕</button></li>`).join('')}</ul>
+        <div class="row" style="margin-top:16px"><span class="mut">Всего уникальных: <b style="color:var(--fg)">${pendingCount()}</b></span><span class="spacer"></span><button class="pri" onclick="usePending()">Готово →</button></div>` : ''}
+      ${msg ? `<div class="err">${esc(msg)}</div>` : ''}`;
+  } else {
+    body = `
+      <div class="mut" style="margin-bottom:10px">Каждая строка — один трек: <b style="color:var(--fg)">Исполнитель — Название</b>${FULL ? ' или ссылка на трек в Spotify' : ''}.</div>
+      <textarea id="paste" placeholder="Кино — Группа крови&#10;Radiohead — Creep"></textarea>
+      <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="pri" onclick="importPasted()">Загрузить список</button></div>
+      ${msg ? `<div class="err">${esc(msg)}</div>` : ''}`;
+  }
+  const limit = FULL || srcTab === 'spotify' ? '' : `<div class="note" style="margin-top:20px">Здесь нет обложек, отрывков и входа через Spotify: страница работает в изолированной среде, где запросы к Spotify заблокированы. Всё это есть в версии-файле <b>spotify-battle.html</b>.</div>`;
+  app.innerHTML = shell(`
+    <div class="panel"><h2>Загрузи свои лайки</h2><div class="mut small">Выбери способ — потом начнётся турнир: из каждой пары оставляешь один трек, пока не останется победитель.</div>
+      ${seg}${body}${limit}
+    </div>
+    <div class="mut small">Файлы читаются прямо в браузере и никуда не отправляются · <a href="#" onclick="demo();return false">попробовать на демо-списке</a></div>`,
+    tracks ? `<button onclick="view='menu';msg='';render()">← Назад</button>` : '');
+  const fi = document.getElementById('fi'), dr = document.getElementById('drop');
+  if (fi) {
+    fi.onchange = () => { addFiles([...fi.files]); fi.value = ''; };
+    dr.ondragover = e => { e.preventDefault(); dr.classList.add('on'); };
+    dr.ondragleave = () => dr.classList.remove('on');
+    dr.ondrop = e => { e.preventDefault(); dr.classList.remove('on'); addFiles([...e.dataTransfer.files]); };
+  }
+  const cid = document.getElementById('cid');
+  if (cid) cid.onkeydown = e => { if (e.key === 'Enter') login(); };
+}
+
+function viewMenu() {
+  if (!tracks) return viewImport();
+  const n = tracks.length, at = LS.get('tracksAt', 0);
+  let cont = '';
+  if (T && !T.winner) cont = `<div class="panel row"><div><h2>Незаконченный турнир</h2><div class="mut">${T.n} треков · сыграно ${T.done} из ${T.total}</div></div><span class="spacer"></span><button class="pri" onclick="view='battle';render()">Продолжить →</button></div>`;
+  else if (T && T.winner) { const w = tr(T.winner); cont = `<div class="panel row"><div><div class="crown">Прошлый победитель</div><b>${esc(w.n)}</b> <span class="mut">${esc(w.a)}</span></div><span class="spacer"></span><button onclick="view='battle';render()">Результаты</button></div>`; }
+  const right = `${FULL ? (LS.get('tok', null) ? `<button onclick="refresh()">↻ Обновить из Spotify</button>` : `<button class="spot" onclick="srcTab='spotify';msg='';view='import';render()">${SPOT}Войти через Spotify</button>`) : ''}<button onclick="msg='';view='import';render()">Другой список</button><button class="ghost" onclick="forget()">Выйти</button>`;
+  app.innerHTML = shell(`
+    ${msg ? `<div class="err" style="margin:0 0 12px">${esc(msg)}</div>` : ''}
+    ${cont}
+    <div class="panel">
+      <div class="row"><div><div class="stat">${n}</div><div class="mut small">треков загружено${at ? ' · ' + new Date(at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="pool" value="all" checked><b>Все треки</b><span class="mut small">${n} шт.</span></label>
+        <label class="opt"><input type="radio" name="pool" value="recent"><b>Последние</b><span class="mut small">недавно лайкнутые</span></label>
+        <label class="opt"><input type="radio" name="pool" value="random"><b>Случайные</b><span class="mut small">случайная выборка</span></label>
+      </div>
+      <div class="row" id="nrow">Сколько треков: <input type="number" id="N" min="2" max="${n}" value="${Math.min(64, n)}"></div>
+      <div class="row" style="margin-top:18px"><span class="mut" id="est"></span><span class="spacer"></span><button class="pri" onclick="start()">Начать турнир →</button></div>
+    </div>
+    <div class="mut small">Управление: <span class="kbd">←</span> левый · <span class="kbd">→</span> правый · <span class="kbd">↓</span> не могу выбрать · <span class="kbd">Z</span> отменить</div>`, right);
+  const upd = () => {
+    const mode = document.querySelector('input[name=pool]:checked').value;
+    document.getElementById('nrow').style.display = mode === 'all' ? 'none' : 'flex';
+    const k = mode === 'all' ? n : Math.max(2, Math.min(n, +document.getElementById('N').value || 2));
+    document.getElementById('est').textContent = `${k - 1} выборов · примерно ${Math.max(1, Math.round((k - 1) * 6 / 60))} мин`;
+  };
+  app.querySelectorAll('input').forEach(i => i.addEventListener('input', upd)); upd();
+}
+
+function start() {
+  const mode = document.querySelector('input[name=pool]:checked').value, n = tracks.length;
+  const k = mode === 'all' ? n : Math.max(2, Math.min(n, +document.getElementById('N').value || 2));
+  const go = () => {
+    let ids = tracks.map(t => t.id);
+    if (mode === 'recent') ids = ids.slice(0, k);
+    if (mode === 'random') ids = shuffle(ids).slice(0, k);
+    T = newTournament(ids); save(); view = 'battle'; render();
+  };
+  if (T && !T.winner) ask('Начать заново? Незаконченный турнир пропадёт.', go); else go();
+}
+
+function card(t, side) {
+  let visual, player = '';
+  if (FULL && (t.img || t.thumb)) { visual = art(t, 'cover', true).replace('<img', `<img data-side="${side}"`); if (t.sid) player = embed(t.sid, 80); }
+  else if (FULL && t.sid) { visual = ''; player = embed(t.sid, 352); }
+  else visual = `<div class="cover" style="${grad(t)}" onclick="pick(${side})">${esc(initials(t))}</div>`;
+  const listen = FULL && t.sid ? '' : `<a class="listen" href="${esc(spUrl(t))}" target="_blank" rel="noopener">▶ Слушать в Spotify</a>`;
+  return `<div class="card">${visual}${player}
+    <div class="meta"><div class="tname">${esc(t.n)}</div><div class="tart">${esc(t.a)}</div><div class="tal">${esc(t.al)}</div></div>
+    ${listen}<button class="pri pick" onclick="pick(${side})">${side ? 'Этот →' : '← Этот'}</button></div>`;
+}
+
+function viewBattle() {
+  const a = tr(T.cur[T.i]), b = tr(T.cur[T.i + 1]);
+  app.innerHTML = shell(`
+    <div class="stage"><b>${stageName()}</b><span class="mut">пара ${T.i / 2 + 1} из ${T.cur.length / 2}</span><span class="spacer"></span><span class="mut small">${T.done} / ${T.total}</span></div>
+    <div class="bar" style="margin-top:10px"><div style="width:${T.done / T.total * 100}%"></div></div>
+    <div class="vs">${card(a, 0)}<div class="vsmark"><span>VS</span></div>${card(b, 1)}</div>
+    <div class="center"><button class="ghost" onclick="pick(-1)">Не могу выбрать — случайно</button></div>`,
+    `<button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>↶ Отменить</button><button onclick="view='menu';render()">Меню</button>`);
+}
+
+function viewResult() {
+  const w = tr(T.winner), r = ranking(), list = showAll ? r : r.slice(0, 32);
+  const wArt = FULL && (w.img || w.thumb) ? art(w, 'cover', true) : (FULL && w.sid ? '' : `<div class="cover" style="${grad(w)}">${esc(initials(w))}</div>`);
+  const wPlay = FULL && w.sid ? embed(w.sid, wArt ? 152 : 352).replace(/style="height:\d+px"/, `style="height:${wArt ? 152 : 352}px"`) : `<a href="${esc(spUrl(w))}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px">▶ Открыть в Spotify</a>`;
+  app.innerHTML = shell(`
+    <div class="panel winner" style="${wArt ? '' : 'grid-template-columns:1fr'}">
+      ${wArt}
+      <div><div class="crown">🏆 Твой любимый трек</div>
+        <div class="tname" style="font-size:28px;margin-top:6px">${esc(w.n)}</div>
+        <div class="tart" style="font-size:17px">${esc(w.a)}</div>
+        <div class="tal">${w.al ? esc(w.al) + ' · ' : ''}победил среди ${T.n} треков</div>
+        ${wPlay}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row" style="margin-bottom:6px"><h2>Итоговая таблица</h2><span class="spacer"></span><button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>↶ Переиграть последний выбор</button></div>
+      <div class="mut small" style="margin-bottom:10px">«топ-8» — трек дошёл до четвертьфинала. Внутри одной группы порядок условный.</div>
+      <ol class="rank">${list.map((x, i) => { const t = tr(x.id); return `<li><span class="num">${i + 1}</span>${art(t, 'sq')}<div class="t"><div>${esc(t.n)}</div><div class="mut small">${esc(t.a)}</div></div><span class="pill ${i === 0 ? 'g' : ''}">${x.label.replace('🏆 ', '')}</span></li>`; }).join('')}</ol>
+      ${r.length > 32 && !showAll ? `<div class="center"><button onclick="showAll=true;render()">Показать все ${r.length}</button></div>` : ''}
+    </div>`,
+    `<button class="pri" onclick="openShare()">📸 Картинка с результатом</button><button onclick="copyTop(this)">Скопировать топ</button><button onclick="view='menu';render()">Новый турнир</button>`);
+}
+function copyTop(btn) {
+  copy(ranking().slice(0, 32).map((x, i) => { const t = tr(x.id); return `${i + 1}. ${t.a ? t.a + ' — ' : ''}${t.n} (${x.label.replace('🏆 ', '')})`; }).join('\n'), btn);
+}
+
+async function refresh() { try { await loadLiked(); msg = ''; view = 'menu'; render(); } catch (e) { handleErr(e); } }
+function handleErr(e) {
+  console.error(e);
+  msg = e.message === 'NOAUTH' ? 'Сессия Spotify истекла, войди снова.' : e.message;
+  if (e.message === 'NOAUTH' || !tracks) { srcTab = 'spotify'; view = 'import'; }
+  render();
+}
+function render() {
+  if (view === 'import' || !tracks) viewImport();
+  else if (view === 'battle' && T) (T.winner ? viewResult : viewBattle)();
+  else viewMenu();
+  window.scrollTo(0, 0);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeShare();
+  if (view !== 'battle' || !T || ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.querySelector('.modal')) return;
+  if (!T.winner && e.key === 'ArrowLeft') { e.preventDefault(); pick(0); }
+  else if (!T.winner && e.key === 'ArrowRight') { e.preventDefault(); pick(1); }
+  else if (!T.winner && e.key === 'ArrowDown') { e.preventDefault(); pick(-1); }
+  else if (['z', 'Z', 'я', 'Я', 'Backspace'].includes(e.key)) { e.preventDefault(); undo(); }
+});
+
+(async () => {
+  if (FULL) {
+    let m = null;
+    try { m = await handleCallback(); } catch (e) { m = String(e.message || e); }
+    if (m) { msg = m; srcTab = 'spotify'; view = 'import'; render(); return; }
+    if (LS.get('tok', null) && new URLSearchParams(location.search).size === 0 && sessionStorage.getItem('justLogged')) { sessionStorage.removeItem('justLogged'); return refresh(); }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
