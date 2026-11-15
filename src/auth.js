@@ -48,6 +48,7 @@ async function api(url) {
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + await token() } });
     if (r.status === 429) { await sleep((+r.headers.get('Retry-After') || 2) * 1000); continue; }
     if (r.status === 401) { const t = LS.get('tok'); if (t) { t.exp = 0; LS.set('tok', t); } continue; }
+    if (r.status === 403) throw new Error('NOTALLOWED');
     if (!r.ok) throw new Error('Spotify API: ошибка ' + r.status);
     return r.json();
   }

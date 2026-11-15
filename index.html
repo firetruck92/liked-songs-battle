@@ -192,6 +192,7 @@ async function api(url) {
     const r = await fetch(url, { headers: { Authorization: 'Bearer ' + await token() } });
     if (r.status === 429) { await sleep((+r.headers.get('Retry-After') || 2) * 1000); continue; }
     if (r.status === 401) { const t = LS.get('tok'); if (t) { t.exp = 0; LS.set('tok', t); } continue; }
+    if (r.status === 403) throw new Error('NOTALLOWED');
     if (!r.ok) throw new Error('Spotify API: ошибка ' + r.status);
     return r.json();
   }
@@ -529,7 +530,7 @@ function viewImport() {
     const fileWarn = location.protocol === 'file:' ? `<div class="err" style="margin:0 0 14px">Страница открыта как файл, так вход не сработает. Запусти в папке с файлом <code>python -m http.server 8000 --bind 127.0.0.1</code> и открой <code>http://127.0.0.1:8000/${esc(location.pathname.split('/').pop())}</code>. CSV-файлы работают и так.</div>` : '';
     const cid = (LS.get('cid', '') || DEFAULT_CLIENT_ID);
     body = `${fileWarn}
-      ${LS.get('tok', null) ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="refresh()">${SPOT}Загрузить мои лайки</button><div class="mut small" style="margin-top:8px">Ты уже вошёл в Spotify · <a href="#" onclick="LS.del('tok');render();return false">войти заново</a></div></div>` : (cid ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="login()">${SPOT}Войти через Spotify</button></div>` : '')}
+      ${LS.get('tok', null) ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="refresh()">${SPOT}Загрузить мои лайки</button><div class="mut small" style="margin-top:8px">Ты уже вошёл в Spotify · <a href="#" onclick="LS.del('tok');render();return false">войти заново</a></div></div>` : (cid ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="login()">${SPOT}Войти через Spotify</button><div class="mut small" style="margin-top:10px;max-width:520px;margin-left:auto;margin-right:auto">Spotify пускает сюда только тех, кого автор добавил в список (до 5 человек). Не пускает — используй вкладку «CSV / JSON файлы»: там лайки выгружаются через Exportify без всяких ключей.</div></div>` : '')}
       <div id="msg" class="err" style="text-align:center">${esc(msg)}</div>
       <details ${cid ? '' : 'open'}><summary>${cid ? 'Настройки приложения Spotify' : 'Первый запуск: подключи своё приложение Spotify (~2 минуты, один раз)'}</summary>
         <ol class="steps" style="margin-top:12px">
@@ -671,6 +672,11 @@ function copyTop(btn) {
 async function refresh() { try { await loadLiked(); msg = ''; view = 'menu'; render(); } catch (e) { handleErr(e); } }
 function handleErr(e) {
   console.error(e);
+  if (e.message === 'NOTALLOWED') {
+    LS.del('tok');
+    msg = 'Spotify пока не пускает твой аккаунт: сайт в тестовом режиме Spotify, и войти могут только до 5 человек, которых добавил автор. Попроси добавить тебя — или загрузи лайки через Exportify, это работает для всех.';
+    srcTab = 'files'; view = 'import'; render(); return;
+  }
   msg = e.message === 'NOAUTH' ? 'Сессия Spotify истекла, войди снова.' : e.message;
   if (e.message === 'NOAUTH' || !tracks) { srcTab = 'spotify'; view = 'import'; }
   render();
