@@ -52,6 +52,22 @@
   .files li{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
   .files .fn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .files .x{margin-left:auto;padding:3px 10px;font-size:13px}
+  .flow{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .fstep{display:flex;align-items:center;gap:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;opacity:.65;transition:opacity .2s,border-color .2s}
+  .fstep.cur{opacity:1;border-color:#1db95466}
+  .fstep.done{opacity:.8}
+  .fstep .fnum{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:var(--panel);border:1px solid var(--line);color:var(--mut)}
+  .fstep.cur .fnum{background:var(--acc);border-color:var(--acc);color:#000}
+  .fstep.done .fnum{background:transparent;border-color:var(--acc);color:var(--acc)}
+  .fstep.done .fnum::after{content:''}
+  .fstep .ftxt{flex:1;min-width:0}
+  .fstep button{flex:none}
+  .drop.wait{border-color:#1db95488}
+  .drop.ping{animation:ping 1.2s ease 2}
+  @keyframes ping{0%,100%{background:transparent}40%{background:#1db95422;border-color:var(--acc)}}
+  body.dragging .drop{border-color:var(--acc);background:#1db9541a}
+  body.dragging::after{content:'Отпусти файл';position:fixed;inset:12px;border:3px dashed var(--acc);border-radius:20px;background:#0b0b0cd0;display:grid;place-items:center;font-size:28px;font-weight:800;color:var(--acc);pointer-events:none;z-index:20}
+  @media (max-width:720px){.fstep{flex-wrap:wrap}.fstep button{width:100%}}
   .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}
   details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}
   .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
@@ -135,6 +151,29 @@ let tracks = LS.get('tracks', null);
 let T = LS.get('tournament', null);
 let view = 'menu', showAll = false, srcTab = 'files', msg = '';
 let pending = [];
+let expOpened = false, expWin = null;
+function openExportify() {
+  const w = Math.min(960, screen.availWidth - 80), h = Math.min(860, screen.availHeight - 80);
+  const left = Math.max(0, screen.availWidth - w - 20), top = 40;
+  try { expWin = window.open('https://exportify.app/', 'exportify', `popup=yes,width=${w},height=${h},left=${left},top=${top}`); } catch { expWin = null; }
+  if (!expWin) { const a = document.createElement('a'); a.href = 'https://exportify.app/'; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+  expOpened = true; msg = ''; render();
+}
+// вернулись на сайт из окна Exportify — подсвечиваем зону для файла
+window.addEventListener('focus', () => {
+  const dr = document.getElementById('drop');
+  if (expOpened && dr && !pending.length) { dr.classList.remove('ping'); void dr.offsetWidth; dr.classList.add('ping'); }
+});
+// файл можно бросить в любое место страницы
+document.addEventListener('dragover', e => { if ([...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files')) { e.preventDefault(); document.body.classList.add('dragging'); } });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+document.addEventListener('drop', e => {
+  document.body.classList.remove('dragging');
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault();
+  if (view === 'battle') return;
+  srcTab = 'files'; view = 'import'; addFiles([...e.dataTransfer.files]);
+});
 
 
 /* ---------- Import from files / text ---------- */
@@ -429,14 +468,24 @@ function viewImport() {
   let body = '';
   if (srcTab === 'files') {
     body = `
-      <ol class="steps">
-        <li>Открой <a href="https://exportify.app" target="_blank" rel="noopener">exportify.app</a> и войди через Spotify.</li>
-        <li>Нажми <b>Export</b> у <b>Liked Songs</b> (и у любых других плейлистов, если хочешь их добавить).</li>
-        <li>Перетащи сюда один или сразу несколько CSV. Подойдёт и <code>YourLibrary.json</code> из экспорта данных Spotify.</li>
-      </ol>
-      <label class="drop" id="drop">
+      <div class="flow">
+        <div class="fstep ${expOpened ? 'done' : 'cur'}">
+          <div class="fnum">1</div>
+          <div class="ftxt"><b>Открой Exportify и войди через Spotify</b><div class="mut small">Откроется окошко рядом, этот сайт останется открытым</div></div>
+          <button class="${expOpened ? '' : 'pri'}" onclick="openExportify()">${expOpened ? 'Открыть ещё раз' : 'Открыть Exportify'}</button>
+        </div>
+        <div class="fstep ${expOpened && !pending.length ? 'cur' : ''}">
+          <div class="fnum">2</div>
+          <div class="ftxt"><b>Нажми Export у «Liked Songs»</b><div class="mut small">Скачается файл <code>liked.csv</code>. Можно выгрузить и другие плейлисты</div></div>
+        </div>
+        <div class="fstep ${expOpened && !pending.length ? 'cur' : ''}">
+          <div class="fnum">3</div>
+          <div class="ftxt"><b>Брось файл сюда</b><div class="mut small">Перетащи из загрузок или окна браузера — можно прямо на страницу</div></div>
+        </div>
+      </div>
+      <label class="drop ${expOpened && !pending.length ? 'wait' : ''}" id="drop">
         <input type="file" accept=".csv,.json,text/csv,application/json" multiple hidden id="fi">
-        <div class="ic">⤓</div><b>Перетащи файлы сюда</b><div class="mut small">или нажми, чтобы выбрать — можно несколько .csv / .json</div>
+        <div class="ic">⤓</div><b>Перетащи liked.csv сюда</b><div class="mut small">или нажми и выбери в папке «Загрузки» — можно несколько .csv / .json (подойдёт и YourLibrary.json из экспорта данных Spotify)</div>
       </label>
       ${pending.length ? `<ul class="files">${pending.map((p, i) => `<li><span>📄</span><span class="fn">${esc(p.name)}</span><span class="mut small">${p.list.length} тр.</span><button class="x ghost" onclick="removeFile(${i})">✕</button></li>`).join('')}</ul>
         <div class="row" style="margin-top:16px"><span class="mut">Всего уникальных: <b style="color:var(--fg)">${pendingCount()}</b></span><span class="spacer"></span><button class="pri" onclick="usePending()">Готово →</button></div>` : ''}
@@ -460,7 +509,7 @@ function viewImport() {
     fi.onchange = () => { addFiles([...fi.files]); fi.value = ''; };
     dr.ondragover = e => { e.preventDefault(); dr.classList.add('on'); };
     dr.ondragleave = () => dr.classList.remove('on');
-    dr.ondrop = e => { e.preventDefault(); dr.classList.remove('on'); addFiles([...e.dataTransfer.files]); };
+    dr.ondrop = e => { e.preventDefault(); e.stopPropagation(); dr.classList.remove('on'); document.body.classList.remove('dragging'); addFiles([...e.dataTransfer.files]); };
   }
 }
 
