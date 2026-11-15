@@ -199,30 +199,43 @@ function parseCSV(text) {
 function fromCSV(text) {
   const rows = parseCSV(text.replace(/^﻿/, ''));
   if (rows.length < 2) throw new Error('в файле нет строк с треками');
-  const h = rows[0].map(x => x.trim().toLowerCase());
+  // заголовки бывают на разных языках (Exportify переводит их под язык браузера): «Track-Name», «Künstlername(n)», …
+  const h = rows[0].map(x => x.trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' '));
   const body = rows.slice(1);
   const sample = body.slice(0, 80);
-  // доля значений в колонке, похожих на ссылку/URI (spotify:..., https://...)
   const share = (i, re) => { let n = 0, c = 0; for (const r of sample) { const v = (r[i] || '').trim(); if (!v) continue; c++; if (re.test(v)) n++; } return c ? n / c : 0; };
   const URI = /^(spotify:|https?:\/\/)/i;
-  const textCol = i => share(i, URI) < .5;   // в колонке обычный текст, а не ссылки
-  const pick = (test, ok) => { for (let i = 0; i < h.length; i++) if (test(h[i]) && ok(i)) return i; return -1; };
-  let iN = pick(x => /^(track name|name|title|track|song|название|трек)$/.test(x), textCol);
-  if (iN < 0) iN = pick(x => /track name|title|название/.test(x), textCol);
-  let iA = pick(x => /artist/.test(x) && /name/.test(x) && !/album/.test(x), textCol);
-  if (iA < 0) iA = pick(x => (/artist|исполнитель/.test(x)) && !/album|uri|\bid\b/.test(x), textCol);
-  if (iA < 0) iA = pick(x => /artist/.test(x) && /name/.test(x), textCol); // хотя бы «album artist name»
-  const iAl = pick(x => (/album/.test(x) && /name/.test(x) && !/artist/.test(x)) || x === 'album' || /альбом/.test(x), textCol);
-  // ссылка на трек: по заголовку или по содержимому (spotify:track:... / open.spotify.com/track/...)
   const TRACK = /(spotify:track:|open\.spotify\.com\/(?:intl-\w+\/)?track\/)/i;
-  let iU = pick(x => /track uri|track id|spotify id|^uri$|track url|^url$/.test(x), i => share(i, TRACK) > .5);
+  const textCol = i => share(i, URI) < .5;
+  const pick = (test, ok) => { for (let i = 0; i < h.length; i++) if (test(h[i]) && ok(i)) return i; return -1; };
+  const ARTIST = /artist|künstler|kunstler|interpret|исполнител|артист|artiste|artista|wykonawca/;
+  const ALBUM = /album|альбом/;
+  const NAME = /name|titel|title|название|nom|nombre|titolo|titre/;
+  const URIW = /uri|url|\bid\b|link|ссылк/;
+
+  let iN = pick(x => /^(track name|name|title|titel|track|song|название|трек)$/.test(x), textCol);
+  if (iN < 0) iN = pick(x => /track|song|titel|title|трек|песн/.test(x) && NAME.test(x) && !ARTIST.test(x) && !ALBUM.test(x) && !URIW.test(x), textCol);
+  let iA = pick(x => ARTIST.test(x) && !ALBUM.test(x) && !URIW.test(x), textCol);
+  if (iA < 0) iA = pick(x => ARTIST.test(x) && !URIW.test(x), textCol);
+  const iAl = pick(x => ALBUM.test(x) && !ARTIST.test(x) && !URIW.test(x) && !/date|datum|дата|bild|image|release|veröffentl/.test(x), textCol);
+  let iU = pick(x => /track/.test(x) && URIW.test(x), i => share(i, TRACK) > .5);
   if (iU < 0) for (let i = 0; i < h.length; i++) if (share(i, TRACK) > .5) { iU = i; break; }
-  const iD = h.findIndex(x => /added at|date added|добавлен/.test(x));
-  const iI = pick(x => /image/.test(x), i => share(i, /^https?:\/\//i) > .5);
-  if (iN < 0) throw new Error('не нашёл колонку с названием трека (Track Name)');
-  const clean = v => (v || '').replace(/\\,/g, ',').trim();
-  return body.map(r => ({ n: clean(r[iN]), a: iA >= 0 ? clean(r[iA]) : '', al: iAl >= 0 ? clean(r[iAl]) : '',
-    uri: iU >= 0 ? clean(r[iU]) : '', added: iD >= 0 ? clean(r[iD]) : '', img: iI >= 0 ? clean(r[iI]) : '' })).filter(t => t.n);
+  let iD = h.findIndex(x => /added at|date added|hinzugefügt am|добавлен|ajouté|añadido|aggiunto/.test(x));
+  const iI = pick(x => /image|bild|cover|обложк|изображ/.test(x), i => share(i, /^https?:\/\//i) > .5);
+  const iP = pick(x => /preview|vorschau|превью/.test(x), i => share(i, /^https?:\/\/.+mp3|p\.scdn\.co/i) > .3);
+
+  // запасной вариант: раскладка Exportify с заголовками на незнакомом языке
+  // (0 track uri, 1 track name, 3 artist names, 5 album name, 9 image, 13 preview, 18 added at)
+  if ((iN < 0 || iA < 0) && h.length >= 19 && share(0, TRACK) > .5 && textCol(1) && textCol(3)) {
+    iN = 1; iA = 3; iU = 0; if (iD < 0) iD = 18;
+    return body.map(r => mk(r, 1, 3, 5, 0, iD, 9, 13)).filter(x => x.n);
+  }
+  if (iN < 0) throw new Error('не нашёл колонку с названием трека. Заголовки в файле: ' + rows[0].slice(0, 6).join(', '));
+  return body.map(r => mk(r, iN, iA, iAl, iU, iD, iI, iP)).filter(x => x.n);
+}
+function mk(r, iN, iA, iAl, iU, iD, iI, iP) {
+  const g = i => i >= 0 ? (r[i] || '').replace(/\\,/g, ',').trim() : '';
+  return { n: g(iN), a: g(iA), al: g(iAl), uri: g(iU), added: g(iD), img: g(iI), prev: g(iP) };
 }
 function fromJSON(text) {
   const j = JSON.parse(text);
