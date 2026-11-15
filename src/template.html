@@ -111,12 +111,8 @@
 <body>
 <div id="app"></div>
 <script>
-const MODE = '__MODE__'; // 'local' — full version (Spotify login, covers, previews); 'artifact' — sandboxed
+const MODE = '__MODE__'; // 'local' — сайт (обложки и отрывки через плеер Spotify); 'artifact' — Claude-артефакт без внешних ресурсов
 const FULL = MODE === 'local';
-const SCOPES = 'user-library-read';
-const REDIRECT_URI = location.origin + location.pathname.replace(/index\.html$/, '');
-// Можно вписать сюда Client ID своего Spotify-приложения — тогда вход будет сразу одной кнопкой.
-const DEFAULT_CLIENT_ID = 'a4b255419148488eab01478371789fb8';
 const app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -137,33 +133,9 @@ const embed = (sid, h) => `<iframe src="https://open.spotify.com/embed/track/${e
 
 let tracks = LS.get('tracks', null);
 let T = LS.get('tournament', null);
-let view = 'menu', showAll = false, srcTab = FULL ? 'spotify' : 'files', msg = '';
-const SPOT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21Zm4.8 15.15a.66.66 0 0 1-.9.22c-2.48-1.51-5.6-1.86-9.27-1.02a.66.66 0 1 1-.3-1.28c4.02-.92 7.47-.52 10.25 1.18.31.19.41.6.22.9Zm1.28-2.85a.82.82 0 0 1-1.13.27c-2.84-1.75-7.17-2.25-10.53-1.23a.82.82 0 1 1-.48-1.57c3.84-1.17 8.61-.6 11.87 1.4.39.24.51.75.27 1.13Zm.11-2.97C14.79 8.8 9.17 8.6 5.92 9.6a.98.98 0 1 1-.57-1.88c3.73-1.13 9.94-.91 13.85 1.41a.98.98 0 0 1-1 1.69Z"/></svg>';
+let view = 'menu', showAll = false, srcTab = 'files', msg = '';
 let pending = [];
 
-/* ---------- Spotify login (full version only) ---------- */
-__AUTH__
-async function loadLiked() {
-  app.innerHTML = shell(`<div class="panel loader"><h2>Загружаю лайки из Spotify…</h2><div class="mut" id="lp">Начинаю</div><div class="bar"><div id="lb" style="width:0"></div></div></div>`);
-  let url = 'https://api.spotify.com/v1/me/tracks?limit=50';
-  const out = [];
-  while (url) {
-    const j = await api(url);
-    for (const it of j.items) {
-      const t = it.track;
-      if (!t || !t.id || t.is_local) continue;
-      const imgs = (t.album && t.album.images) || [];
-      const mid = imgs.find(i => i.width && i.width <= 320 && i.width >= 200) || imgs[imgs.length - 1] || {};
-      out.push({ n: t.name, a: (t.artists || []).map(x => x.name).join(', '), al: t.album ? t.album.name : '',
-        uri: t.uri, img: (imgs[0] || {}).url || '', thumb: mid.url || '', added: it.added_at });
-    }
-    const lp = document.getElementById('lp'), lb = document.getElementById('lb');
-    if (lp) lp.textContent = `${out.length} из ${j.total}`;
-    if (lb) lb.style.width = (j.total ? Math.min(100, (j.offset + j.items.length) / j.total * 100) : 100) + '%';
-    url = j.next;
-  }
-  setTracks(out, true);
-}
 
 /* ---------- Import from files / text ---------- */
 function parseCSV(text) {
@@ -239,7 +211,7 @@ function pendingCount() { const s = new Set(); pending.forEach(p => p.list.forEa
 function usePending() { try { setTracks(pending.flatMap(p => p.list), true); pending = []; msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }
 function importPasted() { try { setTracks(fromText(document.getElementById('paste').value), false); msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }
 function demo() { const d = []; for (let i = 1; i <= 16; i++) d.push({ a: 'Демо-артист ' + ((i % 5) + 1), n: 'Песня №' + i, al: 'Демо-альбом' }); setTracks(d, false); view = 'menu'; render(); }
-function forget() { ask('Удалить загруженный список и турнир?', () => { LS.del('tracks'); LS.del('tournament'); LS.del('tok'); tracks = null; T = null; view = 'import'; render(); }); }
+function forget() { ask('Удалить загруженный список и турнир?', () => { LS.del('tracks'); LS.del('tournament'); LS.del('tok'); LS.del('cid'); tracks = null; T = null; view = 'import'; render(); }); }
 
 /* ---------- Tournament ---------- */
 __CORE__
@@ -401,42 +373,12 @@ async function copyShare(btn) {
   try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); btn.textContent = 'Скопировано ✓'; shMsg('Теперь вставь в любой чат (Ctrl+V).'); }
   catch { btn.textContent = 'Не вышло'; shMsg('Копирование картинок здесь заблокировано — сохрани PNG.'); }
 }
-async function getFull(btn) {
-  if (!DL) { msg = 'Скачивание недоступно в этом окне — попроси файл spotify-battle.html у Claude в чате.'; render(); return; }
-  try { await DL.save({ filename: 'spotify-battle.html', data: FULL_SRC }); btn.textContent = 'Скачано ✓'; }
-  catch (e) { if (!(e && e.code === 'declined')) { msg = 'Не вышло скачать: ' + ((e && e.message) || 'ошибка'); render(); } }
-}
-const FULL_SRC = __FULLSRC__;
-
 /* ---------- Views ---------- */
 function viewImport() {
-  const tabs = [['spotify', 'Войти через Spotify'], ['files', 'CSV / JSON файлы'], ['text', 'Вставить списком']];
+  const tabs = [['files', 'Exportify / CSV'], ['text', 'Вставить списком']];
   const seg = `<div class="seg">${tabs.map(([k, l]) => `<button class="${srcTab === k ? 'act' : ''}" onclick="srcTab='${k}';msg='';render()">${l}</button>`).join('')}</div>`;
   let body = '';
-  if (srcTab === 'spotify' && !FULL) {
-    body = `
-      <div style="text-align:center;padding:10px 0 4px">
-        <div class="mut" style="max-width:560px;margin:0 auto 18px">Войти через Spotify прямо здесь нельзя: страница работает в изолированной среде, и сервера Spotify для неё закрыты. Скачай полную версию — это один HTML-файл с кнопкой входа, обложками и отрывками треков.</div>
-        <button class="pri big spot" onclick="getFull(this)">${SPOT}Скачать полную версию с входом через Spotify</button>
-        <div class="mut small" style="margin-top:14px">Как запустить: положи файл в папку → в ней <code>python -m http.server 8000 --bind 127.0.0.1</code> → открой <code>http://127.0.0.1:8000/spotify-battle.html</code></div>
-        ${msg ? `<div class="err">${esc(msg)}</div>` : ''}
-      </div>`;
-  } else if (srcTab === 'spotify') {
-    const fileWarn = location.protocol === 'file:' ? `<div class="err" style="margin:0 0 14px">Страница открыта как файл, так вход не сработает. Запусти в папке с файлом <code>python -m http.server 8000 --bind 127.0.0.1</code> и открой <code>http://127.0.0.1:8000/${esc(location.pathname.split('/').pop())}</code>. CSV-файлы работают и так.</div>` : '';
-    const cid = (LS.get('cid', '') || DEFAULT_CLIENT_ID);
-    body = `${fileWarn}
-      ${LS.get('tok', null) ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="refresh()">${SPOT}Загрузить мои лайки</button><div class="mut small" style="margin-top:8px">Ты уже вошёл в Spotify · <a href="#" onclick="LS.del('tok');render();return false">войти заново</a></div></div>` : (cid ? `<div style="text-align:center;padding:12px 0 6px"><button class="pri big spot" onclick="login()">${SPOT}Войти через Spotify</button><div class="mut small" style="margin-top:10px;max-width:520px;margin-left:auto;margin-right:auto">Spotify пускает сюда только тех, кого автор добавил в список (до 5 человек). Не пускает — используй вкладку «CSV / JSON файлы»: там лайки выгружаются через Exportify без всяких ключей.</div></div>` : '')}
-      <div id="msg" class="err" style="text-align:center">${esc(msg)}</div>
-      <details ${cid ? '' : 'open'}><summary>${cid ? 'Настройки приложения Spotify' : 'Первый запуск: подключи своё приложение Spotify (~2 минуты, один раз)'}</summary>
-        <ol class="steps" style="margin-top:12px">
-          <li>Открой <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> → <b>Create app</b>.</li>
-          <li>В <b>Redirect URIs</b> вставь ровно: <code>${esc(REDIRECT_URI)}</code> <button class="ghost small" style="padding:3px 10px" onclick="copy('${esc(REDIRECT_URI)}',this)">Копировать</button></li>
-          <li>Отметь <b>Web API</b>, сохрани и вставь <b>Client ID</b> сюда:</li>
-        </ol>
-        <div class="row"><input id="cid" placeholder="Client ID" style="flex:1;min-width:240px" value="${esc(cid)}"><button class="${cid ? '' : 'pri'}" onclick="login()">${cid ? 'Сохранить и войти' : 'Войти через Spotify'}</button></div>
-        <div class="mut small" style="margin-top:10px">Доступ только на чтение лайков. Всё хранится у тебя в браузере. Дальше вход — одной кнопкой.</div>
-      </details>`;
-  } else if (srcTab === 'files') {
+  if (srcTab === 'files') {
     body = `
       <ol class="steps">
         <li>Открой <a href="https://exportify.app" target="_blank" rel="noopener">exportify.app</a> и войди через Spotify.</li>
@@ -457,7 +399,7 @@ function viewImport() {
       <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="pri" onclick="importPasted()">Загрузить список</button></div>
       ${msg ? `<div class="err">${esc(msg)}</div>` : ''}`;
   }
-  const limit = FULL || srcTab === 'spotify' ? '' : `<div class="note" style="margin-top:20px">Здесь нет обложек, отрывков и входа через Spotify: страница работает в изолированной среде, где запросы к Spotify заблокированы. Всё это есть в версии-файле <b>spotify-battle.html</b>.</div>`;
+  const limit = FULL ? '' : `<div class="note" style="margin-top:20px">Здесь нет обложек и отрывков: страница работает в изолированной среде, где Spotify заблокирован. На сайте <b>firetruck92.github.io/liked-songs-battle</b> они есть.</div>`;
   app.innerHTML = shell(`
     <div class="panel"><h2>Загрузи свои лайки</h2><div class="mut small">Выбери способ — потом начнётся турнир: из каждой пары оставляешь один трек, пока не останется победитель.</div>
       ${seg}${body}${limit}
@@ -471,8 +413,6 @@ function viewImport() {
     dr.ondragleave = () => dr.classList.remove('on');
     dr.ondrop = e => { e.preventDefault(); dr.classList.remove('on'); addFiles([...e.dataTransfer.files]); };
   }
-  const cid = document.getElementById('cid');
-  if (cid) cid.onkeydown = e => { if (e.key === 'Enter') login(); };
 }
 
 function viewMenu() {
@@ -481,7 +421,7 @@ function viewMenu() {
   let cont = '';
   if (T && !T.winner) cont = `<div class="panel row"><div><h2>Незаконченный турнир</h2><div class="mut">${T.n} треков · сыграно ${T.done} из ${T.total}</div></div><span class="spacer"></span><button class="pri" onclick="view='battle';render()">Продолжить →</button></div>`;
   else if (T && T.winner) { const w = tr(T.winner); cont = `<div class="panel row"><div><div class="crown">Прошлый победитель</div><b>${esc(w.n)}</b> <span class="mut">${esc(w.a)}</span></div><span class="spacer"></span><button onclick="view='battle';render()">Результаты</button></div>`; }
-  const right = `${FULL ? (LS.get('tok', null) ? `<button onclick="refresh()">↻ Обновить из Spotify</button>` : `<button class="spot" onclick="srcTab='spotify';msg='';view='import';render()">${SPOT}Войти через Spotify</button>`) : ''}<button onclick="msg='';view='import';render()">Другой список</button><button class="ghost" onclick="forget()">Выйти</button>`;
+  const right = `<button onclick="msg='';view='import';render()">Другой список</button><button class="ghost" onclick="forget()">Сбросить</button>`;
   app.innerHTML = shell(`
     ${msg ? `<div class="err" style="margin:0 0 12px">${esc(msg)}</div>` : ''}
     ${cont}
@@ -564,18 +504,6 @@ function copyTop(btn) {
   copy(ranking().slice(0, 32).map((x, i) => { const t = tr(x.id); return `${i + 1}. ${t.a ? t.a + ' — ' : ''}${t.n} (${x.label.replace('🏆 ', '')})`; }).join('\n'), btn);
 }
 
-async function refresh() { try { await loadLiked(); msg = ''; view = 'menu'; render(); } catch (e) { handleErr(e); } }
-function handleErr(e) {
-  console.error(e);
-  if (e.message === 'NOTALLOWED') {
-    LS.del('tok');
-    msg = 'Spotify пока не пускает твой аккаунт: сайт в тестовом режиме Spotify, и войти могут только до 5 человек, которых добавил автор. Попроси добавить тебя — или загрузи лайки через Exportify, это работает для всех.';
-    srcTab = 'files'; view = 'import'; render(); return;
-  }
-  msg = e.message === 'NOAUTH' ? 'Сессия Spotify истекла, войди снова.' : e.message;
-  if (e.message === 'NOAUTH' || !tracks) { srcTab = 'spotify'; view = 'import'; }
-  render();
-}
 function render() {
   if (view === 'import' || !tracks) viewImport();
   else if (view === 'battle' && T) (T.winner ? viewResult : viewBattle)();
@@ -591,17 +519,8 @@ document.addEventListener('keydown', e => {
   else if (['z', 'Z', 'я', 'Я', 'Backspace'].includes(e.key)) { e.preventDefault(); undo(); }
 });
 
-(async () => {
-  if (FULL) {
-    const hadCode = new URLSearchParams(location.search).has('code');
-    let m = null;
-    try { m = await handleCallback(); } catch (e) { m = String(e.message || e); }
-    if (m) { msg = m; srcTab = 'spotify'; view = 'import'; render(); return; }
-    // только что вернулись из Spotify, или вошли, но лайков ещё нет — грузим сразу
-    if (LS.get('tok', null) && (hadCode || !tracks)) return refresh();
-  }
-  render();
-})();
+render();
+
 </script>
 </body>
 </html>
