@@ -116,7 +116,7 @@ const FULL = MODE === 'local';
 const SCOPES = 'user-library-read';
 const REDIRECT_URI = location.origin + location.pathname.replace(/index\.html$/, '');
 // Можно вписать сюда Client ID своего Spotify-приложения — тогда вход будет сразу одной кнопкой.
-const DEFAULT_CLIENT_ID = '';
+const DEFAULT_CLIENT_ID = 'a4b255419148488eab01478371789fb8';
 const app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
