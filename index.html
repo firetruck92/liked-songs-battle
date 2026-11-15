@@ -151,6 +151,11 @@ let tracks = LS.get('tracks', null);
 let T = LS.get('tournament', null);
 let view = 'menu', showAll = false, srcTab = 'files', msg = '';
 let pending = [];
+// списки, загруженные старой версией с ошибкой (вместо исполнителя — spotify:album:…), просим загрузить заново
+if (tracks && tracks.filter(x => /^spotify:/i.test(x.a || '')).length > tracks.length / 3) {
+  tracks = null; T = null; LS.del('tracks'); LS.del('tournament');
+  msg = 'Мы исправили чтение исполнителей из CSV — загрузи liked.csv ещё раз, пожалуйста.';
+}
 let expOpened = false, expWin = null;
 function openExportify() {
   const w = Math.min(960, screen.availWidth - 80), h = Math.min(860, screen.availHeight - 80);
@@ -183,6 +188,7 @@ function parseCSV(text) {
     const c = text[i];
     if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
     else if (c === '"') q = true;
+    else if (c === '\\' && text[i + 1] === ',') { f += ','; i++; }
     else if (c === ',') { row.push(f); f = ''; }
     else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
     else f += c;
@@ -194,13 +200,29 @@ function fromCSV(text) {
   const rows = parseCSV(text.replace(/^﻿/, ''));
   if (rows.length < 2) throw new Error('в файле нет строк с треками');
   const h = rows[0].map(x => x.trim().toLowerCase());
-  const col = (...names) => { for (const n of names) { let i = h.indexOf(n); if (i < 0) i = h.findIndex(x => x.includes(n) && !(n === 'name' && /album|artist|playlist|label/.test(x))); if (i >= 0) return i; } return -1; };
-  const iN = col('track name', 'name', 'title', 'название'), iA = col('artist name', 'artist', 'исполнитель'),
-        iAl = col('album name', 'album', 'альбом'), iU = col('track uri', 'uri', 'spotify id', 'url'),
-        iD = col('added at', 'date added'), iI = col('album image url', 'image');
+  const body = rows.slice(1);
+  const sample = body.slice(0, 80);
+  // доля значений в колонке, похожих на ссылку/URI (spotify:..., https://...)
+  const share = (i, re) => { let n = 0, c = 0; for (const r of sample) { const v = (r[i] || '').trim(); if (!v) continue; c++; if (re.test(v)) n++; } return c ? n / c : 0; };
+  const URI = /^(spotify:|https?:\/\/)/i;
+  const textCol = i => share(i, URI) < .5;   // в колонке обычный текст, а не ссылки
+  const pick = (test, ok) => { for (let i = 0; i < h.length; i++) if (test(h[i]) && ok(i)) return i; return -1; };
+  let iN = pick(x => /^(track name|name|title|track|song|название|трек)$/.test(x), textCol);
+  if (iN < 0) iN = pick(x => /track name|title|название/.test(x), textCol);
+  let iA = pick(x => /artist/.test(x) && /name/.test(x) && !/album/.test(x), textCol);
+  if (iA < 0) iA = pick(x => (/artist|исполнитель/.test(x)) && !/album|uri|\bid\b/.test(x), textCol);
+  if (iA < 0) iA = pick(x => /artist/.test(x) && /name/.test(x), textCol); // хотя бы «album artist name»
+  const iAl = pick(x => (/album/.test(x) && /name/.test(x) && !/artist/.test(x)) || x === 'album' || /альбом/.test(x), textCol);
+  // ссылка на трек: по заголовку или по содержимому (spotify:track:... / open.spotify.com/track/...)
+  const TRACK = /(spotify:track:|open\.spotify\.com\/(?:intl-\w+\/)?track\/)/i;
+  let iU = pick(x => /track uri|track id|spotify id|^uri$|track url|^url$/.test(x), i => share(i, TRACK) > .5);
+  if (iU < 0) for (let i = 0; i < h.length; i++) if (share(i, TRACK) > .5) { iU = i; break; }
+  const iD = h.findIndex(x => /added at|date added|добавлен/.test(x));
+  const iI = pick(x => /image/.test(x), i => share(i, /^https?:\/\//i) > .5);
   if (iN < 0) throw new Error('не нашёл колонку с названием трека (Track Name)');
-  return rows.slice(1).map(r => ({ n: r[iN], a: iA >= 0 ? (r[iA] || '').replace(/\\,/g, ',') : '', al: iAl >= 0 ? r[iAl] : '',
-    uri: iU >= 0 ? r[iU] : '', added: iD >= 0 ? r[iD] : '', img: iI >= 0 ? r[iI] : '' })).filter(t => t.n);
+  const clean = v => (v || '').replace(/\\,/g, ',').trim();
+  return body.map(r => ({ n: clean(r[iN]), a: iA >= 0 ? clean(r[iA]) : '', al: iAl >= 0 ? clean(r[iAl]) : '',
+    uri: iU >= 0 ? clean(r[iU]) : '', added: iD >= 0 ? clean(r[iD]) : '', img: iI >= 0 ? clean(r[iI]) : '' })).filter(t => t.n);
 }
 function fromJSON(text) {
   const j = JSON.parse(text);
