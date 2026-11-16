@@ -908,7 +908,7 @@ function viewMenu() {
   let cont = '';
   if (T && !T.winner) cont = `<div class="panel row"><div><h2>${L('unfinished')}</h2><div class="mut">${L('unfinishedSub', T.n, T.done, T.total)}</div></div><span class="spacer"></span><button class="pri" onclick="view='battle';render()">${L('cont')}</button></div>`;
   else if (T && T.winner) { const w = tr(T.winner); cont = `<div class="panel row"><div><div class="crown">${L('prevWinner')}</div><b>${esc(w.n)}</b> <span class="mut">${esc(w.a)}</span></div><span class="spacer"></span><button onclick="view='battle';render()">${L('results')}</button></div>`; }
-  const right = `<button onclick="msg='';view='import';render()">${L('otherList')}</button><button class="ghost" onclick="forget()">${L('reset')}</button>`;
+  const right = `<button onclick="forget()">${L('reset')}</button>`;
   app.innerHTML = shell(`
     ${msg ? `<div class="err" style="margin:0 0 12px">${esc(msg)}</div>` : ''}
     ${cont}
