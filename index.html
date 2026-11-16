@@ -659,7 +659,8 @@ function drawArt(ctx, img, t, x, y, s, r) {
 async function makeShareImage() {
   const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
   const ctx = c.getContext('2d');
-  const r = ranking(), w = tr(T.winner), rest = r.slice(1, 5).map(x => ({ t: tr(x.id), label: x.label }));
+  // на картинке — победитель и места со 2 по 8 (топ-8)
+  const r = ranking(), w = tr(T.winner), rest = r.slice(1, 8).map(x => ({ t: tr(x.id), label: x.label }));
   const [wImg, ...rImgs] = await Promise.all([coverFor(w), ...rest.map(x => coverFor(x.t))]);
   ctx.fillStyle = '#0b0b0c'; ctx.fillRect(0, 0, W, H);
   const gl = ctx.createRadialGradient(W / 2, 60, 40, W / 2, 60, 820);
@@ -667,33 +668,34 @@ async function makeShareImage() {
   ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#1db954'; ctx.font = `800 24px ${FONT}`;
-  ctx.fillText('L I K E D   S O N G S   B A T T L E', W / 2, 80);
-  ctx.fillStyle = '#f4f4f5'; ctx.font = `800 52px ${FONT}`;
-  ctx.fillText(L('imgTitle'), W / 2, 146);
-  const S = 480, cx = (W - S) / 2, cy = 190;
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 18; ctx.fillStyle = '#000'; rrect(ctx, cx, cy, S, S, 28); ctx.fill(); ctx.restore();
-  drawArt(ctx, wImg, w, cx, cy, S, 28);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f4f5'; ctx.font = `800 56px ${FONT}`;
-  const lines = wrap2(ctx, w.n, W - 140); let y = cy + S + 82;
-  lines.forEach(l => { ctx.fillText(l, W / 2, y); y += 64; });
-  ctx.fillStyle = '#b5b5bd'; ctx.font = `500 34px ${FONT}`; ctx.fillText(fit(ctx, w.a, W - 160), W / 2, y);
-  ctx.fillStyle = '#7c7c85'; ctx.font = `500 25px ${FONT}`; ctx.fillText(L('imgSub', T.n, T.total), W / 2, y + 44);
-  const ly = y + 84;
+  ctx.fillText('L I K E D   S O N G S   B A T T L E', W / 2, 76);
+  ctx.fillStyle = '#f4f4f5'; ctx.font = `800 50px ${FONT}`;
+  ctx.fillText(L('imgTitle'), W / 2, 138);
+  const S = rest.length > 4 ? 370 : 480, cx = (W - S) / 2, cy = 176;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 18; ctx.fillStyle = '#000'; rrect(ctx, cx, cy, S, S, 26); ctx.fill(); ctx.restore();
+  drawArt(ctx, wImg, w, cx, cy, S, 26);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f4f5'; ctx.font = `800 52px ${FONT}`;
+  const lines = wrap2(ctx, w.n, W - 140); let y = cy + S + 72;
+  lines.forEach(l => { ctx.fillText(l, W / 2, y); y += 58; });
+  ctx.fillStyle = '#b5b5bd'; ctx.font = `500 32px ${FONT}`; ctx.fillText(fit(ctx, w.a, W - 160), W / 2, y);
+  ctx.fillStyle = '#7c7c85'; ctx.font = `500 24px ${FONT}`; ctx.fillText(L('imgSub', T.n, T.total), W / 2, y + 40);
+  const ly = y + 70;
   if (rest.length) {
-    const boxH = H - ly - 64;
+    const maxH = H - ly - 62;
+    const rowH = Math.min(78, (maxH - 20) / rest.length), boxH = Math.min(maxH, rowH * rest.length + 20);
+    const s = Math.max(30, Math.min(52, rowH - 18));
     ctx.fillStyle = 'rgba(255,255,255,.045)'; rrect(ctx, 70, ly, W - 140, boxH, 24); ctx.fill();
-    const rowH = Math.min(80, (boxH - 24) / rest.length), s = Math.max(30, Math.min(54, rowH - 16));
     rest.forEach((x, i) => {
-      const ry = ly + 12 + i * rowH + (rowH - s) / 2, mid = ry + s / 2;
-      ctx.textAlign = 'left'; ctx.fillStyle = '#7c7c85'; ctx.font = `700 26px ${FONT}`; ctx.fillText(String(i + 2), 102, mid + 9);
-      drawArt(ctx, rImgs[i], x.t, 142, ry, s, 8);
-      ctx.textAlign = 'left'; ctx.fillStyle = '#f4f4f5'; ctx.font = `700 26px ${FONT}`; ctx.fillText(fit(ctx, x.t.n, 560), 142 + s + 20, mid - 3);
-      ctx.fillStyle = '#9b9ba3'; ctx.font = `500 21px ${FONT}`; ctx.fillText(fit(ctx, x.t.a, 560), 142 + s + 20, mid + 24);
-      ctx.textAlign = 'right'; ctx.fillStyle = '#9b9ba3'; ctx.font = `600 21px ${FONT}`; ctx.fillText(x.label, W - 102, mid + 8);
+      const ry = ly + 10 + i * rowH + (rowH - s) / 2, mid = ry + s / 2;
+      if (i) { ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(100, ly + 10 + i * rowH, W - 200, 1); }
+      ctx.textAlign = 'left'; ctx.fillStyle = '#7c7c85'; ctx.font = `700 25px ${FONT}`; ctx.fillText(String(i + 2), 100, mid + 9);
+      drawArt(ctx, rImgs[i], x.t, 140, ry, s, 8);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#f4f4f5'; ctx.font = `700 25px ${FONT}`; ctx.fillText(fit(ctx, x.t.n, 580), 140 + s + 18, mid - 3);
+      ctx.fillStyle = '#9b9ba3'; ctx.font = `500 20px ${FONT}`; ctx.fillText(fit(ctx, x.t.a, 580), 140 + s + 18, mid + 23);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#9b9ba3'; ctx.font = `600 20px ${FONT}`; ctx.fillText(x.label, W - 100, mid + 8);
     });
   }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#55555c'; ctx.font = `500 21px ${FONT}`;
-  ctx.fillStyle = '#1db954'; ctx.font = `700 22px ${FONT}`;
+  ctx.textAlign = 'center'; ctx.fillStyle = '#1db954'; ctx.font = `700 22px ${FONT}`;
   ctx.fillText(SITE.replace(/^https:\/\//, '').replace(/\/$/, ''), W / 2, H - 26);
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
