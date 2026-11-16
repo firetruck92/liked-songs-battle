@@ -25,7 +25,10 @@ const I18N = {
     saveFail: 'Здесь сохранить не вышло — правый клик или долгое нажатие на картинке → «Сохранить изображение».',
     pasteNow: 'Картинка и ссылка в буфере — вставь в любой чат (Ctrl+V).', copyImgBlocked: 'Копирование картинок здесь заблокировано — сохрани PNG.',
     // share link
-    shareBtn: '📤 Поделиться', linkCopied: 'Ссылка скопирована ✓', siteLink: 'Ссылка на сайт:', copyLink: 'Копировать',
+    shareBtn: '📤 Поделиться', linkCopied: 'Ссылка скопирована ✓', siteLink: 'Ссылка на сайт:', copyLink: 'Копировать', home: 'На главную',
+    igHint: 'Картинка сохранена — загрузи её в Instagram в пост или историю, а ссылку на сайт добавь в подпись.',
+    socCopied: n => `Картинка в буфере — вставь её в пост ${n} (Ctrl+V). Текст и ссылка уже там.`,
+    socNoImg: n => `${n} откроется с текстом и ссылкой. Картинку прикрепи вручную: сохрани PNG.`,
     shareInvite: 'Пройди свой турнир:',
     friendFav: '🏆 Любимый трек друга', friendTop: 'Его топ', playYours: 'Найти свой любимый трек →',
     friendWon: n => `победил среди ${I18N.ru.tracks(n)}`, badLink: 'Ссылка на результат повреждена — но свой турнир пройти можно.',
@@ -88,7 +91,10 @@ const I18N = {
     saved: 'Saved ✓', saveCancel: 'Saving cancelled.',
     saveFail: "Couldn't save here — right-click or long-press the image → “Save image”.",
     pasteNow: 'Image and link copied — paste into any chat (Ctrl+V).', copyImgBlocked: 'Copying images is blocked here — save the PNG instead.',
-    shareBtn: '📤 Share', linkCopied: 'Link copied ✓', siteLink: 'Site link:', copyLink: 'Copy',
+    shareBtn: '📤 Share', linkCopied: 'Link copied ✓', siteLink: 'Site link:', copyLink: 'Copy', home: 'Home',
+    igHint: 'Image saved — upload it to Instagram as a post or story and add the site link to the caption.',
+    socCopied: n => `The image is in your clipboard — paste it into the ${n} post (Ctrl+V). Text and link are already there.`,
+    socNoImg: n => `${n} opens with the text and link. Attach the image yourself: save the PNG.`,
     shareInvite: 'Find yours:',
     friendFav: '🏆 Your friend’s favorite', friendTop: 'Their top', playYours: 'Find your own favorite →',
     friendWon: n => `won among ${I18N.en.tracks(n)}`, badLink: 'This result link is broken — but you can still play your own.',
@@ -129,7 +135,7 @@ const I18N = {
     demoA: 'Demo artist', demoN: 'Song #', demoAl: 'Demo album', trackSid: 'Track ',
   }
 };
-let LANG = (() => { try { const s = JSON.parse(localStorage.getItem('lang')); if (s === 'ru' || s === 'en') return s; } catch {} return /^(ru|uk|be|kk)/i.test(navigator.language || '') ? 'ru' : 'en'; })();
+let LANG = (() => /^(ru|uk|be|kk)/i.test(navigator.language || '') ? 'ru' : 'en')();
 function L(k, ...args) { const v = (I18N[LANG] && I18N[LANG][k] !== undefined) ? I18N[LANG][k] : I18N.ru[k]; return typeof v === 'function' ? v(...args) : v; }
 function applyLang() { document.documentElement.lang = LANG; document.body.dataset.drop = L('dropOverlay'); document.title = 'Liked Songs Battle'; }
 function setLang(l) { LANG = l; LS.set('lang', l); applyLang(); render(); }
