@@ -75,7 +75,18 @@
   @keyframes ping{0%,100%{background:transparent}40%{background:#1db95422;border-color:var(--acc)}}
   body.dragging .drop{border-color:var(--acc);background:#1db9541a}
   body.dragging::after{content:attr(data-drop);position:fixed;inset:12px;border:3px dashed var(--acc);border-radius:20px;background:#0b0b0cd0;display:grid;place-items:center;font-size:28px;font-weight:800;color:var(--acc);pointer-events:none;z-index:20}
-  @media (max-width:720px){.fstep{flex-wrap:wrap}.fstep button{width:100%}}
+  @media (max-width:720px){
+    .logo h1{font-size:18px;white-space:nowrap}
+    .logo .dot{width:32px;height:32px;font-size:15px}
+    .logo .sub{font-size:12px}
+    header{gap:8px}
+    .lang button{padding:5px 8px;gap:5px;font-size:12px}
+    .lang svg{width:18px;height:12px}
+    .seg{display:flex;width:100%}
+    .seg button{flex:1;padding:8px 6px;font-size:14px;white-space:nowrap}
+    .panel{padding:18px}
+    .fstep{padding:12px}
+    .toolbar button{flex:1}.fstep{flex-wrap:wrap}.fstep button{width:100%}}
   .lang{flex:none;display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
   .lang button{border:0;background:transparent;color:var(--mut);padding:5px 11px;display:inline-flex;align-items:center;gap:7px;font-size:13px;letter-spacing:.03em}
   .lang button:hover{background:#2c2c30}
@@ -114,6 +125,11 @@
   .soc svg{width:34px;height:34px;padding:7px;border-radius:50%;background:var(--c);color:#fff;box-sizing:border-box}
   .soc[style*="#000"] svg{box-shadow:0 0 0 1px #444}
   .soc:hover{border-color:#44444a;background:#26262a}
+  .sheet{position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));z-index:15;background:var(--panel);border:1px solid #1db95466;border-radius:18px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;box-shadow:0 12px 40px #000a;animation:sheetIn .3s cubic-bezier(.2,.8,.2,1)}
+  .sheet .mut{grid-column:1/-1}
+  .sheet .big{width:100%}
+  @keyframes sheetIn{from{transform:translateY(120%)}}
+  .fakebtn{display:inline-block;border-radius:999px;background:var(--acc);color:#000;font-weight:700;padding:14px 26px}
   .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}
   details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}
   .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
@@ -238,6 +254,9 @@ const I18N = {
     s2: 'Нажми Export у «Liked Songs»', s2sub: 'Скачается файл <code>liked.csv</code>. Можно выгрузить и другие плейлисты',
     s3: 'Брось файл сюда', s3sub: 'Перетащи из загрузок или окна браузера — можно прямо на страницу',
     dropT: 'Перетащи liked.csv сюда',
+    s1subM: 'Откроется в новой вкладке — потом вернись сюда', s3m: 'Вернись сюда и выбери файл', s3subM: 'Нажми кнопку ниже и выбери liked.csv в «Загрузках»',
+    pickBtn: '📂 Выбрать liked.csv', dropSubM: 'Файл обычно лежит в «Загрузках» (на iPhone — «Файлы» → «Загрузки»)',
+    sheetHint: 'Скачал liked.csv в Exportify? Выбери его — и сразу начнём.',
     dropSub: 'или нажми и выбери в папке «Загрузки» — можно несколько .csv / .json (подойдёт и YourLibrary.json из экспорта данных Spotify)',
     fileTracks: n => `${n} тр.`, totalUniq: 'Всего уникальных:', done: 'Готово →',
     textHint: full => `Каждая строка — один трек: <b style="color:var(--fg)">Исполнитель — Название</b>${full ? ' или ссылка на трек в Spotify' : ''}.`,
@@ -303,6 +322,9 @@ const I18N = {
     s2: 'Click Export next to “Liked Songs”', s2sub: 'You’ll get <code>liked.csv</code>. You can export other playlists too',
     s3: 'Drop the file here', s3sub: 'Drag it from your Downloads or the browser — anywhere on the page works',
     dropT: 'Drop liked.csv here',
+    s1subM: 'Opens in a new tab — then come back here', s3m: 'Come back here and pick the file', s3subM: 'Tap the button below and pick liked.csv from Downloads',
+    pickBtn: '📂 Choose liked.csv', dropSubM: 'It’s usually in Downloads (on iPhone: Files → Downloads)',
+    sheetHint: 'Downloaded liked.csv from Exportify? Pick it and we’ll start right away.',
     dropSub: 'or click to pick it from Downloads — several .csv / .json files work too (including YourLibrary.json from your Spotify data export)',
     fileTracks: n => `${n} tr.`, totalUniq: 'Unique total:', done: 'Done →',
     textHint: full => `One track per line: <b style="color:var(--fg)">Artist — Title</b>${full ? ' or a Spotify track link' : ''}.`,
@@ -358,19 +380,32 @@ if (tracks && tracks.filter(x => /^spotify:/i.test(x.a || '')).length > tracks.l
   tracks = null; T = null; LS.del('tracks'); LS.del('tournament');
   msg = L('fixedMsg');
 }
+const MOBILE = (navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (matchMedia && matchMedia('(pointer: coarse)').matches && !matchMedia('(hover: hover)').matches);
 let expOpened = false, expWin = null;
 function openExportify() {
   const w = Math.min(960, screen.availWidth - 80), h = Math.min(860, screen.availHeight - 80);
   const left = Math.max(0, screen.availWidth - w - 20), top = 40;
-  try { expWin = window.open('https://exportify.app/', 'exportify', `popup=yes,width=${w},height=${h},left=${left},top=${top}`); } catch { expWin = null; }
+  try { expWin = MOBILE ? window.open('https://exportify.app/', '_blank') : window.open('https://exportify.app/', 'exportify', `popup=yes,width=${w},height=${h},left=${left},top=${top}`); } catch { expWin = null; }
   if (!expWin) { const a = document.createElement('a'); a.href = 'https://exportify.app/'; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
   expOpened = true; msg = ''; render();
 }
 // вернулись на сайт из окна Exportify — подсвечиваем зону для файла
-window.addEventListener('focus', () => {
+function onBack() {
   const dr = document.getElementById('drop');
   if (expOpened && dr && !pending.length) { dr.classList.remove('ping'); void dr.offsetWidth; dr.classList.add('ping'); }
-});
+  if (MOBILE && expOpened && !pending.length && (view === 'import' || !tracks) && !shared) showPickSheet();
+}
+window.addEventListener('focus', onBack);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) onBack(); });
+// нижняя панель «Выбрать скачанный файл» — один тап до выбора liked.csv
+function showPickSheet() {
+  if (document.getElementById('pickSheet')) return;
+  const s = document.createElement('div'); s.id = 'pickSheet'; s.className = 'sheet';
+  s.innerHTML = `<div class="mut small">${L('sheetHint')}</div><button class="pri big" onclick="pickFile()">${L('pickBtn')}</button><button class="ghost small" onclick="hidePickSheet()">✕</button>`;
+  document.body.appendChild(s);
+}
+function hidePickSheet() { const s = document.getElementById('pickSheet'); if (s) s.remove(); }
+function pickFile() { const fi = document.getElementById('fi'); if (fi) fi.click(); }
 // файл можно бросить в любое место страницы
 document.addEventListener('dragover', e => { if ([...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files')) { e.preventDefault(); document.body.classList.add('dragging'); } });
 document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
@@ -499,6 +534,8 @@ async function addFiles(files) {
       pending = pending.filter(p => p.name !== f.name).concat({ name: f.name, list });
     } catch (e) { msg = `«${f.name}»: ${e.message}`; }
   }
+  hidePickSheet();
+  if (MOBILE && pending.length && !msg) { usePending(); return; }
   render();
 }
 function removeFile(i) { pending.splice(i, 1); render(); }
@@ -767,7 +804,7 @@ function openOut(url, popup) {
   const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
 }
 function shareTextNoUrl() { const w = tr(T.winner); return L('shareText', (w.a ? w.a + ' — ' : '') + w.n) + '. ' + L('shareInvite'); }
-const isMobile = () => (navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+const isMobile = () => MOBILE;
 // Сайты соцсетей не принимают картинку по ссылке «поделиться» — приложить её можно только так:
 // на телефоне — системное меню с файлом (картинка + текст + ссылка уходят вместе в выбранное приложение);
 // на компьютере — кладём картинку в буфер (или скачиваем) и открываем соцсеть с текстом и ссылкой, остаётся Ctrl+V.
@@ -862,7 +899,7 @@ function viewImport() {
       <div class="flow">
         <div class="fstep ${expOpened ? 'done' : 'cur'}">
           <div class="fnum">1</div>
-          <div class="ftxt"><b>${L('s1')}</b><div class="mut small">${L('s1sub')}</div></div>
+          <div class="ftxt"><b>${L('s1')}</b><div class="mut small">${L(MOBILE ? 's1subM' : 's1sub')}</div></div>
           <button class="${expOpened ? '' : 'pri'}" onclick="openExportify()">${expOpened ? L('openAgain') : L('openExp')}</button>
         </div>
         <div class="fstep ${expOpened && !pending.length ? 'cur' : ''}">
@@ -871,12 +908,12 @@ function viewImport() {
         </div>
         <div class="fstep ${expOpened && !pending.length ? 'cur' : ''}">
           <div class="fnum">3</div>
-          <div class="ftxt"><b>${L('s3')}</b><div class="mut small">${L('s3sub')}</div></div>
+          <div class="ftxt"><b>${L(MOBILE ? 's3m' : 's3')}</b><div class="mut small">${L(MOBILE ? 's3subM' : 's3sub')}</div></div>
         </div>
       </div>
       <label class="drop ${expOpened && !pending.length ? 'wait' : ''}" id="drop">
         <input type="file" accept=".csv,.json,text/csv,application/json" multiple hidden id="fi">
-        <div class="ic">⤓</div><b>${L('dropT')}</b><div class="mut small">${L('dropSub')}</div>
+        ${MOBILE ? `<span class="pri big fakebtn">${L('pickBtn')}</span><div class="mut small">${L('dropSubM')}</div>` : `<div class="ic">⤓</div><b>${L('dropT')}</b><div class="mut small">${L('dropSub')}</div>`}
       </label>
       ${pending.length ? `<ul class="files">${pending.map((p, i) => `<li><span>📄</span><span class="fn">${esc(p.name)}</span><span class="mut small">${L('fileTracks', p.list.length)}</span><button class="x ghost" onclick="removeFile(${i})">✕</button></li>`).join('')}</ul>
         <div class="row" style="margin-top:16px"><span class="mut">${L('totalUniq')} <b style="color:var(--fg)">${pendingCount()}</b></span><span class="spacer"></span><button class="pri" onclick="usePending()">${L('done')}</button></div>` : ''}
@@ -924,7 +961,7 @@ function viewMenu() {
       <div class="row" id="nrow">${L('howMany')} <input type="number" id="N" min="2" max="${n}" value="${Math.min(64, n)}"></div>
       <div class="row" style="margin-top:18px"><span class="mut" id="est"></span><span class="spacer"></span><button class="pri" onclick="start()">${L('start')}</button></div>
     </div>
-    <div class="mut small">${L('controls')} <span class="kbd">←</span> ${L('cLeft')} · <span class="kbd">→</span> ${L('cRight')} · <span class="kbd">↓</span> ${L('cRand')} · <span class="kbd">Z</span> ${L('cUndo')}</div>`, right);
+    <div class="mut small" style="${MOBILE ? 'display:none' : ''}">${L('controls')} <span class="kbd">←</span> ${L('cLeft')} · <span class="kbd">→</span> ${L('cRight')} · <span class="kbd">↓</span> ${L('cRand')} · <span class="kbd">Z</span> ${L('cUndo')}</div>`, right);
   const upd = () => {
     const mode = document.querySelector('input[name=pool]:checked').value;
     document.getElementById('nrow').style.display = mode === 'all' ? 'none' : 'flex';
@@ -1043,6 +1080,7 @@ function viewShared() {
 function leaveShared() { shared = null; history.replaceState(null, '', location.pathname); render(); }
 
 function render() {
+  if (view !== 'import' && tracks) hidePickSheet();
   if (shared) viewShared();
   else if (view === 'import' || !tracks) viewImport();
   else if (view === 'battle' && T) (T.winner ? viewResult : viewBattle)();
