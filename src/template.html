@@ -151,6 +151,8 @@ let tracks = LS.get('tracks', null);
 let T = LS.get('tournament', null);
 let view = 'menu', showAll = false, srcTab = 'files', msg = '';
 let pending = [];
+indexTracks();
+if (T && Array.isArray(T.hist) && typeof T.hist[0] === 'string') T.hist = []; // старый формат истории отмен
 // списки, загруженные старой версией с ошибкой (вместо исполнителя — spotify:album:…), просим загрузить заново
 if (tracks && tracks.filter(x => /^spotify:/i.test(x.a || '')).length > tracks.length / 3) {
   tracks = null; T = null; LS.del('tracks'); LS.del('tournament');
@@ -254,19 +256,38 @@ function fromText(text) {
     return m ? { a: m[1].trim(), n: m[2].trim() } : { a: '', n: l };
   });
 }
+// «Кузьма и барин» с двух одинаковых альбомов, «Мария - Live», «I'm Broken - 2014 Remaster» —
+// для турнира это одна песня, иначе выбитая копия «возвращается» в следующих раундах.
+const VERSION = /remaster|live|version|edit|mix|mono|stereo|bonus|deluxe|demo|acoustic|acústico|akusti|radio|instrumental|anniversary|ремастер|концерт|версия|live in/i;
+function songKey(t) {
+  let n = String(t.n || '').toLowerCase();
+  n = n.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, m => VERSION.test(m) || /feat|ft\.|with /i.test(m) ? ' ' : m);
+  n = n.replace(/\s+[-–—]\s+.*$/, m => VERSION.test(m) ? '' : m);
+  n = n.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const a = String(t.a || '').toLowerCase().split(/,|&| feat| ft\./)[0].replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return n + '|' + a;
+}
 function setTracks(list, sortByAdded) {
-  const seen = new Set(), out = [];
-  for (const t of list) {
-    const sid = sidOf(t.uri);
-    const key = sid || ((t.a || '') + '|' + t.n).toLowerCase();
-    if (seen.has(key)) continue; seen.add(key);
-    out.push({ n: String(t.n).trim(), a: (t.a || '').trim(), al: (t.al || '').trim(), sid,
-      img: FULL ? (t.img || '') : '', thumb: FULL ? (t.thumb || t.img || '') : '', added: t.added || '' });
+  let items = list.map(t => ({ n: String(t.n).trim(), a: (t.a || '').trim(), al: (t.al || '').trim(), sid: sidOf(t.uri),
+    img: FULL ? (t.img || t.thumb || '') : '', added: t.added || '' })).filter(t => t.n);
+  if (sortByAdded && items.some(t => t.added)) items.sort((x, y) => (y.added || '').localeCompare(x.added || ''));
+  const seen = new Set(), ids = new Set(), out = [];
+  for (const t of items) {
+    const k = songKey(t);
+    if (seen.has(k) || (t.sid && seen.has(t.sid))) continue;
+    seen.add(k); if (t.sid) seen.add(t.sid);
+    let id = t.sid || ('h' + hash(k).toString(36)); while (ids.has(id)) id += '_';
+    ids.add(id); t.id = id; delete t.added; out.push(t);
   }
   if (out.length < 2) throw new Error('нужно хотя бы 2 трека, нашёл ' + out.length);
-  if (sortByAdded && out.some(t => t.added)) out.sort((x, y) => (y.added || '').localeCompare(x.added || ''));
-  out.forEach((t, i) => t.id = 'x' + i);
-  tracks = out; LS.set('tracks', tracks); LS.set('tracksAt', Date.now());
+  // незаконченный турнир переживает загрузку нового списка: недостающие треки запоминаем в нём самом
+  if (T && !T.winner) {
+    const fresh = new Set(out.map(x => x.id)); T.meta = T.meta || {};
+    [...T.cur, ...T.next, ...T.elim.map(e => e.id)].forEach(id => { if (!fresh.has(id) && byId[id]) T.meta[id] = byId[id]; });
+    save();
+  }
+  tracks = out; indexTracks();
+  LS.set('tracks', tracks); LS.set('tracksAt', Date.now()); LS.set('dupes', items.length - out.length);
 }
 async function addFiles(files) {
   msg = '';
@@ -510,7 +531,7 @@ function viewMenu() {
     ${msg ? `<div class="err" style="margin:0 0 12px">${esc(msg)}</div>` : ''}
     ${cont}
     <div class="panel">
-      <div class="row"><div><div class="stat">${n}</div><div class="mut small">треков загружено${at ? ' · ' + new Date(at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
+      <div class="row"><div><div class="stat">${n}</div><div class="mut small">треков загружено${LS.get('dupes', 0) ? ` · склеено дублей: ${LS.get('dupes', 0)}` : ''}${at ? ' · ' + new Date(at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
       <div class="opts">
         <label class="opt"><input type="radio" name="pool" value="all" checked><b>Все треки</b><span class="mut small">${n} шт.</span></label>
         <label class="opt"><input type="radio" name="pool" value="recent"><b>Последние</b><span class="mut small">недавно лайкнутые</span></label>
@@ -556,7 +577,7 @@ function viewBattle() {
   const a = tr(T.cur[T.i]), b = tr(T.cur[T.i + 1]);
   app.innerHTML = shell(`
     <div class="stage"><b>${stageName()}</b><span class="mut">пара ${T.i / 2 + 1} из ${T.cur.length / 2}</span><span class="spacer"></span><span class="mut small">${T.done} / ${T.total}</span></div>
-    <div class="bar" style="margin-top:10px"><div style="width:${T.done / T.total * 100}%"></div></div>
+    ${saveFailed ? `<div class="err" style="margin:8px 0">Браузеру не хватает места, прогресс сейчас не сохраняется — не закрывай и не перезагружай вкладку, или начни турнир на меньшем числе треков.</div>` : ''}<div class="bar" style="margin-top:10px"><div style="width:${T.done / T.total * 100}%"></div></div>
     <div class="vs">${card(a, 0)}<div class="vsmark"><span>VS</span></div>${card(b, 1)}</div>
     <div class="center"><button class="ghost" onclick="pick(-1)">Не могу выбрать — случайно</button></div>`,
     `<button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>↶ Отменить</button><button onclick="view='menu';render()">Меню</button>`);
