@@ -556,18 +556,24 @@ function openOut(url, popup) {
   const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
 }
 function shareTextNoUrl() { const w = tr(T.winner); return L('shareText', (w.a ? w.a + ' — ' : '') + w.n) + '. ' + L('shareInvite'); }
+const isMobile = () => (navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+// Сайты соцсетей не принимают картинку по ссылке «поделиться» — приложить её можно только так:
+// на телефоне — системное меню с файлом (картинка + текст + ссылка уходят вместе в выбранное приложение);
+// на компьютере — кладём картинку в буфер (или скачиваем) и открываем соцсеть с текстом и ссылкой, остаётся Ctrl+V.
 async function socialShare(k, btn) {
   const s = SOCIALS.find(x => x.k === k); if (!s || !shareBlob) return;
-  if (k === 'ig') {
-    if (canShareFile()) { try { await navigator.share({ files: [shareFile()] }); } catch (e) { if (e.name !== 'AbortError') shMsg(L('shareFail')); } return; }
-    await saveShare(); openOut('https://www.instagram.com/'); shMsg(L('igHint')); return;
+  if (isMobile() && canShareFile()) {
+    try { await navigator.share({ files: [shareFile()], title: L('shareTitle'), text: shareMsgText() }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
   }
+  if (k === 'ig') { await saveShare(); openOut('https://www.instagram.com/'); shMsg(L('igHint')); return; }
   let copied = false;
-  if (!canShareFile() && window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
     try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); copied = true; } catch {}
   }
+  if (!copied) await saveShare();
   openOut(s.url(shareTextNoUrl(), SITE), true);
-  shMsg(copied ? L('socCopied', s.n) : L('socNoImg', s.n));
+  shMsg(copied ? L('socCopied', s.n) : L('socSaved', s.n));
 }
 // в буфер кладём и картинку, и текст со ссылкой — мессенджеры берут что умеют
 async function copyShare(btn) {

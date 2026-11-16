@@ -226,8 +226,8 @@ const I18N = {
     // share link
     shareBtn: '📤 Поделиться', linkCopied: 'Ссылка скопирована ✓', siteLink: 'Ссылка на сайт:', copyLink: 'Копировать', home: 'На главную',
     igHint: 'Картинка сохранена — загрузи её в Instagram в пост или историю, а ссылку на сайт добавь в подпись.',
-    socCopied: n => `Картинка в буфере — вставь её в пост ${n} (Ctrl+V). Текст и ссылка уже там.`,
-    socNoImg: n => `${n} откроется с текстом и ссылкой. Картинку прикрепи вручную: сохрани PNG.`,
+    socCopied: n => `Картинка скопирована — в открывшемся окне ${n} нажми Ctrl+V, и она прикрепится. Текст и ссылка уже там.`,
+    socSaved: n => `Картинка скачана — прикрепи её к посту ${n}. Текст и ссылка уже там.`,
     shareInvite: 'Пройди свой турнир:',
     friendFav: '🏆 Любимый трек друга', friendTop: 'Его топ', playYours: 'Найти свой любимый трек →',
     friendWon: n => `победил среди ${I18N.ru.tracks(n)}`, badLink: 'Ссылка на результат повреждена — но свой турнир пройти можно.',
@@ -292,8 +292,8 @@ const I18N = {
     pasteNow: 'Image and link copied — paste into any chat (Ctrl+V).', copyImgBlocked: 'Copying images is blocked here — save the PNG instead.',
     shareBtn: '📤 Share', linkCopied: 'Link copied ✓', siteLink: 'Site link:', copyLink: 'Copy', home: 'Home',
     igHint: 'Image saved — upload it to Instagram as a post or story and add the site link to the caption.',
-    socCopied: n => `The image is in your clipboard — paste it into the ${n} post (Ctrl+V). Text and link are already there.`,
-    socNoImg: n => `${n} opens with the text and link. Attach the image yourself: save the PNG.`,
+    socCopied: n => `Image copied — press Ctrl+V in the ${n} window to attach it. Text and link are already there.`,
+    socSaved: n => `The image was downloaded — attach it to the ${n} post. Text and link are already there.`,
     shareInvite: 'Find yours:',
     friendFav: '🏆 Your friend’s favorite', friendTop: 'Their top', playYours: 'Find your own favorite →',
     friendWon: n => `won among ${I18N.en.tracks(n)}`, badLink: 'This result link is broken — but you can still play your own.',
@@ -765,18 +765,24 @@ function openOut(url, popup) {
   const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
 }
 function shareTextNoUrl() { const w = tr(T.winner); return L('shareText', (w.a ? w.a + ' — ' : '') + w.n) + '. ' + L('shareInvite'); }
+const isMobile = () => (navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+// Сайты соцсетей не принимают картинку по ссылке «поделиться» — приложить её можно только так:
+// на телефоне — системное меню с файлом (картинка + текст + ссылка уходят вместе в выбранное приложение);
+// на компьютере — кладём картинку в буфер (или скачиваем) и открываем соцсеть с текстом и ссылкой, остаётся Ctrl+V.
 async function socialShare(k, btn) {
   const s = SOCIALS.find(x => x.k === k); if (!s || !shareBlob) return;
-  if (k === 'ig') {
-    if (canShareFile()) { try { await navigator.share({ files: [shareFile()] }); } catch (e) { if (e.name !== 'AbortError') shMsg(L('shareFail')); } return; }
-    await saveShare(); openOut('https://www.instagram.com/'); shMsg(L('igHint')); return;
+  if (isMobile() && canShareFile()) {
+    try { await navigator.share({ files: [shareFile()], title: L('shareTitle'), text: shareMsgText() }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
   }
+  if (k === 'ig') { await saveShare(); openOut('https://www.instagram.com/'); shMsg(L('igHint')); return; }
   let copied = false;
-  if (!canShareFile() && window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
     try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); copied = true; } catch {}
   }
+  if (!copied) await saveShare();
   openOut(s.url(shareTextNoUrl(), SITE), true);
-  shMsg(copied ? L('socCopied', s.n) : L('socNoImg', s.n));
+  shMsg(copied ? L('socCopied', s.n) : L('socSaved', s.n));
 }
 // в буфер кладём и картинку, и текст со ссылкой — мессенджеры берут что умеют
 async function copyShare(btn) {
