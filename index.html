@@ -75,6 +75,29 @@
   .lang svg{width:20px;height:13px;border-radius:3px;display:block;box-shadow:0 0 0 1px #0003}
   .sitelink{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
   .sitelink a{font-weight:600}
+
+  /* анимации турнира */
+  .vs .card{position:relative;animation:cardInL .38s cubic-bezier(.2,.8,.2,1) both}
+  .vs .card:last-child{animation-name:cardInR}
+  @keyframes cardInL{from{opacity:0;transform:translateX(-28px) scale(.96)}}
+  @keyframes cardInR{from{opacity:0;transform:translateX(28px) scale(.96)}}
+  .card.win{animation:cardWin .56s cubic-bezier(.2,.8,.2,1) forwards;border-color:var(--acc);box-shadow:0 0 0 2px var(--acc),0 0 48px #1db95455;z-index:2}
+  @keyframes cardWin{0%{transform:scale(1)}30%{transform:scale(1.045)}100%{transform:scale(1.025)}}
+  .card.lose{animation:cardLose .5s cubic-bezier(.5,0,.75,0) forwards;pointer-events:none}
+  .card.lose-l{--rot:-4deg}.card.lose-r{--rot:4deg}
+  @keyframes cardLose{0%{transform:none;opacity:1}100%{transform:translateY(60px) scale(.9) rotate(var(--rot,0));opacity:0;filter:grayscale(1) blur(1px)}}
+  .card .ok{position:absolute;left:50%;top:38%;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;background:var(--acc);display:grid;place-items:center;box-shadow:0 10px 40px #1db95499;animation:okPop .45s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
+  .card .ok svg{width:56px;height:56px;fill:none;stroke:#000;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;animation:okDraw .3s .12s ease forwards}
+  @keyframes okPop{from{transform:scale(0) rotate(-20deg);opacity:0}}
+  @keyframes okDraw{to{stroke-dashoffset:0}}
+  .vsmark span.hit{animation:vsHit .5s ease}
+  @keyframes vsHit{30%{transform:scale(1.35) rotate(12deg);background:var(--acc);color:#000;border-color:var(--acc)}}
+  .spark{position:fixed;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;pointer-events:none;z-index:30;animation:spark .65s cubic-bezier(.2,.8,.3,1) forwards}
+  @keyframes spark{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+  .confetti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:40}
+  .winner{animation:winIn .6s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes winIn{from{opacity:0;transform:translateY(16px) scale(.98)}}
+  @media (prefers-reduced-motion: reduce){.vs .card,.card.win,.card.lose,.card .ok,.card .ok svg,.vsmark span.hit,.winner{animation:none!important}.card .ok svg{stroke-dashoffset:0}}
   .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}
   details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}
   .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
@@ -539,7 +562,7 @@ function copy(text, btn) {
 }
 function art(t, cls, big) {
   const src = big ? (t.img || t.thumb) : (t.thumb || t.img);
-  if (FULL && src) return `<img class="${cls}" src="${esc(src)}" alt="" ${cls === 'cover' ? 'onclick="this.dataset.side&&pick(+this.dataset.side)"' : ''}>`;
+  if (FULL && src) return `<img class="${cls}" src="${esc(src)}" alt="" ${cls === 'cover' ? 'onclick="this.dataset.side&&choose(+this.dataset.side)"' : ''}>`;
   return `<div class="${cls}" style="${grad(t)}">${esc(cls === 'sq' ? initials(t)[0] : initials(t))}</div>`;
 }
 
@@ -701,6 +724,62 @@ async function copyShare(btn) {
   }
   btn.textContent = L('copied'); shMsg(L('pasteNow'));
 }
+
+/* ---------- Анимации / Animations ---------- */
+const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let animating = false, celebrate = false;
+// победитель вспыхивает зелёным, проигравший улетает вниз, потом появляется новая пара
+function choose(side) {
+  if (animating || !T || T.winner) return;
+  if (side < 0) side = Math.random() < .5 ? 0 : 1;
+  const cards = document.querySelectorAll('.vs .card');
+  if (T.done + 1 === T.total) celebrate = true;
+  if (cards.length !== 2 || reduceMotion()) { pick(side); return; }
+  animating = true;
+  const win = cards[side], lose = cards[1 - side];
+  win.classList.add('win');
+  lose.classList.add('lose', side ? 'lose-l' : 'lose-r');
+  const ok = document.createElement('div'); ok.className = 'ok'; ok.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'; win.appendChild(ok);
+  const vs = document.querySelector('.vsmark span'); if (vs) vs.classList.add('hit');
+  burst(win, 14);
+  setTimeout(() => { animating = false; pick(side); }, 560);
+}
+// маленький салют из точек вокруг выбранной карточки
+function burst(el, n) {
+  const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + Math.min(r.height / 2, 260);
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('i'); d.className = 'spark';
+    const a = Math.PI * 2 * i / n + Math.random() * .4, dist = 90 + Math.random() * 90;
+    d.style.left = cx + 'px'; d.style.top = cy + 'px';
+    d.style.setProperty('--dx', Math.cos(a) * dist + 'px'); d.style.setProperty('--dy', Math.sin(a) * dist + 'px');
+    d.style.background = ['#1db954', '#1ed760', '#ffffff', '#b3f5c9'][i % 4];
+    document.body.appendChild(d); setTimeout(() => d.remove(), 700);
+  }
+}
+// конфетти, когда определился победитель
+function confetti() {
+  if (reduceMotion()) return;
+  const c = document.createElement('canvas'); c.className = 'confetti';
+  const W = c.width = innerWidth * devicePixelRatio, H = c.height = innerHeight * devicePixelRatio;
+  document.body.appendChild(c);
+  const ctx = c.getContext('2d'), cols = ['#1db954', '#1ed760', '#ffffff', '#ffd54a', '#7ce0a3', '#ff6b9a'];
+  const ps = Array.from({ length: 160 }, (_, i) => ({
+    x: W * (i % 2 ? .15 : .85), y: H * .35, vx: (Math.random() - .5) * 26 * devicePixelRatio + (i % 2 ? 9 : -9) * devicePixelRatio,
+    vy: (-Math.random() * 22 - 8) * devicePixelRatio, w: (6 + Math.random() * 7) * devicePixelRatio, h: (8 + Math.random() * 10) * devicePixelRatio,
+    r: Math.random() * 6, vr: (Math.random() - .5) * .35, col: cols[i % cols.length]
+  }));
+  const t0 = performance.now();
+  (function frame(now) {
+    const el = now - t0; ctx.clearRect(0, 0, W, H);
+    for (const p of ps) {
+      p.vy += .55 * devicePixelRatio; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.max(0, 1 - el / 2600);
+      ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2))); ctx.restore();
+    }
+    if (el < 2600) requestAnimationFrame(frame); else c.remove();
+  })(t0);
+}
+
 /* ---------- Views ---------- */
 function viewImport() {
   const tabs = [['files', L('tabFiles')], ['text', L('tabText')]];
@@ -799,11 +878,11 @@ function card(t, side) {
   let visual, player = '';
   if (FULL && (t.img || t.thumb)) { visual = art(t, 'cover', true).replace('<img', `<img data-side="${side}"`); if (t.sid) player = embed(t.sid, 80); }
   else if (FULL && t.sid) { visual = ''; player = embed(t.sid, 352); }
-  else visual = `<div class="cover" style="${grad(t)}" onclick="pick(${side})">${esc(initials(t))}</div>`;
+  else visual = `<div class="cover" style="${grad(t)}" onclick="choose(${side})">${esc(initials(t))}</div>`;
   const listen = FULL && t.sid ? '' : `<a class="listen" href="${esc(spUrl(t))}" target="_blank" rel="noopener">${L('listen')}</a>`;
   return `<div class="card">${visual}${player}
     <div class="meta"><div class="tname">${esc(t.n)}</div><div class="tart">${esc(t.a)}</div><div class="tal">${esc(t.al)}</div></div>
-    ${listen}<button class="pri pick" onclick="pick(${side})">${side ? L('thisR') : L('thisL')}</button></div>`;
+    ${listen}<button class="pri pick" onclick="choose(${side})">${side ? L('thisR') : L('thisL')}</button></div>`;
 }
 
 function viewBattle() {
@@ -812,7 +891,7 @@ function viewBattle() {
     <div class="stage"><b>${stageName()}</b><span class="mut">${L('pair', T.i / 2 + 1, T.cur.length / 2)}</span><span class="spacer"></span><span class="mut small">${T.done} / ${T.total}</span></div>
     ${saveFailed ? `<div class="err" style="margin:8px 0">${L('saveWarn')}</div>` : ''}<div class="bar" style="margin-top:10px"><div style="width:${T.done / T.total * 100}%"></div></div>
     <div class="vs">${card(a, 0)}<div class="vsmark"><span>VS</span></div>${card(b, 1)}</div>
-    <div class="center"><button class="ghost" onclick="pick(-1)">${L('cantChoose')}</button></div>`,
+    <div class="center"><button class="ghost" onclick="choose(-1)">${L('cantChoose')}</button></div>`,
     `<button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>${L('undo')}</button><button onclick="view='menu';render()">${L('menu')}</button>`);
 }
 
@@ -845,6 +924,7 @@ function viewResult() {
     </div>`,
     `<button class="pri" onclick="shareResult()">${L('shareBtn')}</button><button onclick="copyTop(this)">${L('copyTop')}</button><button onclick="view='menu';render()">${L('newT')}</button>`);
   if (FULL || DL) setTimeout(prepareShare, 50);
+  if (celebrate) { celebrate = false; setTimeout(confetti, 60); }
 }
 function copyTop(btn) {
   copy(ranking().slice(0, 32).map((x, i) => { const t = tr(x.id); return `${i + 1}. ${t.a ? t.a + ' — ' : ''}${t.n} (${x.label.replace('🏆 ', '')})`; }).join('\n'), btn);
@@ -900,10 +980,10 @@ function render() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeShare();
   if (view !== 'battle' || !T || shared || ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.querySelector('.modal')) return;
-  if (!T.winner && e.key === 'ArrowLeft') { e.preventDefault(); pick(0); }
-  else if (!T.winner && e.key === 'ArrowRight') { e.preventDefault(); pick(1); }
-  else if (!T.winner && e.key === 'ArrowDown') { e.preventDefault(); pick(-1); }
-  else if (['z', 'Z', 'я', 'Я', 'Backspace'].includes(e.key)) { e.preventDefault(); undo(); }
+  if (!T.winner && e.key === 'ArrowLeft') { e.preventDefault(); choose(0); }
+  else if (!T.winner && e.key === 'ArrowRight') { e.preventDefault(); choose(1); }
+  else if (!T.winner && e.key === 'ArrowDown') { e.preventDefault(); choose(-1); }
+  else if (['z', 'Z', 'я', 'Я', 'Backspace'].includes(e.key)) { e.preventDefault(); if (!animating) undo(); }
 });
 window.addEventListener('hashchange', () => { shared = readShared(); render(); });
 
