@@ -73,6 +73,8 @@
   .lang button:hover{background:#2c2c30}
   .lang button.act{background:var(--fg);color:#000}
   .lang svg{width:20px;height:13px;border-radius:3px;display:block;box-shadow:0 0 0 1px #0003}
+  .sitelink{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .sitelink a{font-weight:600}
   .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}
   details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}
   .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
@@ -433,36 +435,52 @@ async function makeShareImage() {
     });
   }
   ctx.textAlign = 'center'; ctx.fillStyle = '#55555c'; ctx.font = `500 21px ${FONT}`;
-  ctx.fillText(new Date().toLocaleDateString(LANG === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, H - 26);
+  ctx.fillStyle = '#1db954'; ctx.font = `700 22px ${FONT}`;
+  ctx.fillText(SITE.replace(/^https:\/\//, '').replace(/\/$/, ''), W / 2, H - 26);
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
-let shareBlob = null, shareURL = null;
+// Делимся картинкой, а к ней прикладываем ссылку на сайт.
+const SITE = 'https://firetruck92.github.io/liked-songs-battle/';
+let shareBlob = null, shareURL = null, shareKey = '';
+const resultKey = () => T && T.winner ? T.winner + '|' + T.done + '|' + LANG : '';
+function shareMsgText() { const w = tr(T.winner); return L('shareText', (w.a ? w.a + ' — ' : '') + w.n) + '. ' + L('shareInvite') + ' ' + SITE; }
+function shareFile() { return new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' }); }
+function canShareFile() { try { return FULL && !!navigator.canShare && navigator.canShare({ files: [shareFile()] }); } catch { return false; } }
+// картинка рисуется заранее, пока смотришь результаты, — тогда «Поделиться» срабатывает с первого нажатия
+async function prepareShare() {
+  const k = resultKey();
+  if (!k || (shareKey === k && shareBlob)) return shareBlob;
+  try { const b = await makeShareImage(); if (resultKey() === k) { shareBlob = b; shareKey = k; if (shareURL) URL.revokeObjectURL(shareURL); shareURL = URL.createObjectURL(b); } } catch (e) { console.error(e); }
+  return shareKey === k ? shareBlob : null;
+}
+async function shareResult() {
+  if (shareBlob && shareKey === resultKey() && canShareFile()) {
+    try { await navigator.share({ files: [shareFile()], title: L('shareTitle'), text: shareMsgText() }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  openShare();
+}
 async function openShare() {
   closeShare();
   const m = document.createElement('div'); m.className = 'modal'; m.id = 'shareModal';
-  m.innerHTML = `<div class="panel wide"><div class="row" style="margin-bottom:12px"><h2>${L('shImgH')}</h2><span class="spacer"></span><button class="ghost" onclick="closeShare()">✕</button></div><div class="shareimg" style="display:grid;place-items:center" id="shBox"><span class="mut">${L('drawing')}</span></div><div class="row" id="shBtns" style="margin-top:14px"></div><div class="mut small" id="shMsg" style="margin-top:10px"></div></div>`;
+  m.innerHTML = `<div class="panel wide"><div class="row" style="margin-bottom:12px"><h2>${L('shImgH')}</h2><span class="spacer"></span><button class="ghost" onclick="closeShare()">✕</button></div><div class="shareimg" style="display:grid;place-items:center" id="shBox"><span class="mut">${L('drawing')}</span></div><div class="row" id="shBtns" style="margin-top:14px"></div><div class="mut small" id="shMsg" style="margin-top:10px"></div><div class="sitelink"><span class="mut small">${L('siteLink')}</span><a href="${SITE}" target="_blank" rel="noopener">${SITE.replace(/^https:\/\//, '')}</a><button class="ghost small" onclick="copy(SITE,this)">${L('copyLink')}</button></div></div>`;
   m.onclick = e => { if (e.target === m) closeShare(); };
   document.body.appendChild(m);
-  try { shareBlob = await makeShareImage(); } catch (e) { console.error(e); shareBlob = null; }
+  await prepareShare();
   if (!document.getElementById('shareModal')) return;
   if (!shareBlob) { document.getElementById('shBox').innerHTML = `<span class="err">${L('drawFail')}</span>`; return; }
-  if (shareURL) URL.revokeObjectURL(shareURL);
-  shareURL = URL.createObjectURL(shareBlob);
   document.getElementById('shBox').outerHTML = `<img class="shareimg" src="${shareURL}" alt="${L('resultAlt')}">`;
-  const file = new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' });
   const btns = [];
-  let canNative = false; try { canNative = FULL && !!navigator.canShare && navigator.canShare({ files: [file] }); } catch {}
-  if (canNative) btns.push(`<button class="pri" onclick="shareNative()">${L('share')}</button>`);
-  if (FULL || DL) btns.push(`<button class="${btns.length ? '' : 'pri'}" onclick="saveShare()">${L('savePng')}</button>`);
-  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) btns.push(`<button onclick="copyShare(this)">${L('copyImg')}</button>`);
+  if (canShareFile()) btns.push(`<button class="pri" onclick="shareNative()">${L('share')}</button>`);
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) btns.push(`<button class="${btns.length ? '' : 'pri'}" onclick="copyShare(this)">${L('copyImg')}</button>`);
+  if (FULL || DL) btns.push(`<button onclick="saveShare()">${L('savePng')}</button>`);
   document.getElementById('shBtns').innerHTML = btns.join('');
   shMsg(btns.length ? '' : L('saveHint'));
 }
 function closeShare() { const m = document.getElementById('shareModal'); if (m) m.remove(); }
 function shMsg(s) { const e = document.getElementById('shMsg'); if (e) e.textContent = s; }
 async function shareNative() {
-  const w = tr(T.winner);
-  try { await navigator.share({ files: [new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' })], title: L('shareTitle'), text: L('shareText', (w.a ? w.a + ' — ' : '') + w.n) }); }
+  try { await navigator.share({ files: [shareFile()], title: L('shareTitle'), text: shareMsgText() }); }
   catch (e) { if (e.name !== 'AbortError') shMsg(L('shareFail')); }
 }
 async function saveShare() {
@@ -470,9 +488,15 @@ async function saveShare() {
   try { await DL.save({ filename: 'my-favorite-song.png', data: shareBlob }); shMsg(L('saved')); }
   catch (e) { shMsg(e && e.code === 'declined' ? L('saveCancel') : L('saveFail')); }
 }
+// в буфер кладём и картинку, и текст со ссылкой — мессенджеры берут что умеют
 async function copyShare(btn) {
-  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); btn.textContent = L('copied'); shMsg(L('pasteNow')); }
-  catch { btn.textContent = L('failShort'); shMsg(L('copyImgBlocked')); }
+  const txt = new Blob([shareMsgText()], { type: 'text/plain' });
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob, 'text/plain': txt })]); }
+  catch {
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); }
+    catch { btn.textContent = L('failShort'); shMsg(L('copyImgBlocked')); return; }
+  }
+  btn.textContent = L('copied'); shMsg(L('pasteNow'));
 }
 /* ---------- Views ---------- */
 function viewImport() {
@@ -616,7 +640,8 @@ function viewResult() {
       ${rankList(list.map(x => ({ t: tr(x.id), label: x.label })))}
       ${r.length > 32 && !showAll ? `<div class="center"><button onclick="showAll=true;render()">${L('showAll', r.length)}</button></div>` : ''}
     </div>`,
-    `<button class="pri" onclick="shareLink(this)">${L('shareBtn')}</button><button onclick="openShare()">${L('imgBtn')}</button><button onclick="copyTop(this)">${L('copyTop')}</button><button onclick="view='menu';render()">${L('newT')}</button>`);
+    `<button class="pri" onclick="shareResult()">${L('shareBtn')}</button><button onclick="copyTop(this)">${L('copyTop')}</button><button onclick="view='menu';render()">${L('newT')}</button>`);
+  if (FULL || DL) setTimeout(prepareShare, 50);
 }
 function copyTop(btn) {
   copy(ranking().slice(0, 32).map((x, i) => { const t = tr(x.id); return `${i + 1}. ${t.a ? t.a + ' — ' : ''}${t.n} (${x.label.replace('🏆 ', '')})`; }).join('\n'), btn);
