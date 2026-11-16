@@ -80,17 +80,30 @@
     .logo .dot{width:32px;height:32px;font-size:15px}
     .logo .sub{font-size:12px}
     header{gap:8px}
-    .lang button{padding:5px 8px;gap:5px;font-size:12px}
-    .lang svg{width:18px;height:12px}
+    .lang{padding:6px 9px;gap:6px;font-size:12px}
     .seg{display:flex;width:100%}
     .seg button{flex:1;padding:8px 6px;font-size:14px;white-space:nowrap}
     .panel{padding:18px}
     .fstep{padding:12px}
     .toolbar button{flex:1}.fstep{flex-wrap:wrap}.fstep button{width:100%}}
-  .lang{flex:none;display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
-  .lang button{border:0;background:transparent;color:var(--mut);padding:5px 11px;display:inline-flex;align-items:center;gap:7px;font-size:13px;letter-spacing:.03em}
-  .lang button:hover{background:#2c2c30}
-  .lang button.act{background:var(--fg);color:#000}
+  .langwrap{position:relative;flex:none}
+  .lang{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;letter-spacing:.03em}
+  .lang .caret{font-style:normal;color:var(--mut);font-size:11px}
+  .langmenu{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:30;min-width:210px;max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 18px 50px #000b;display:flex;flex-direction:column;gap:2px;animation:menuIn .15s ease}
+  @keyframes menuIn{from{opacity:0;transform:translateY(-4px)}}
+  .langmenu button{display:flex;align-items:center;gap:10px;border:0;border-radius:10px;background:transparent;padding:9px 10px;font-weight:500;text-align:start}
+  .langmenu button:hover{background:var(--panel2)}
+  .langmenu button.act{background:#1db9541f;color:var(--acc2)}
+  .langmenu .ln{flex:1}
+  .langmenu .lc{color:var(--mut);font-size:12px;letter-spacing:.04em}
+  .langmenu svg{width:22px;height:15px;border-radius:3px;display:block;box-shadow:0 0 0 1px #0003;flex:none}
+  /* справа налево (арабский, иврит): страница зеркалится, но карточки пары остаются «левая/правая», как стрелки */
+  [dir=rtl] .vs{direction:ltr}
+  [dir=rtl] .vs .card{direction:rtl}
+  [dir=rtl] .steps li{padding:4px 36px 4px 0}
+  [dir=rtl] .steps li::before{left:auto;right:0}
+  [dir=rtl] .logo{margin:-4px -4px -4px 0;padding:4px 4px 4px 8px}
+  [dir=rtl] .rank .num{text-align:left}
   .lang svg{width:20px;height:13px;border-radius:3px;display:block;box-shadow:0 0 0 1px #0003}
   .sitelink{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
   .sitelink a{font-weight:600}
@@ -737,7 +750,7 @@ function viewMenu() {
     ${msg ? `<div class="err" style="margin:0 0 12px">${esc(msg)}</div>` : ''}
     ${cont}
     <div class="panel">
-      <div class="row"><div><div class="stat">${n}</div><div class="mut small">${L('loaded', n)}${dupes ? L('dupes', dupes) : ''}${at ? ' · ' + new Date(at).toLocaleString(LANG === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
+      <div class="row"><div><div class="stat">${n}</div><div class="mut small">${L('loaded', n)}${dupes ? L('dupes', dupes) : ''}${at ? ' · ' + new Date(at).toLocaleString(LANG === 'en' ? 'en-GB' : LANG, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
       <div class="opts">
         <label class="opt"><input type="radio" name="pool" value="all" checked><b>${L('optAll')}</b><span class="mut small">${L('pcs', n)}</span></label>
         <label class="opt"><input type="radio" name="pool" value="recent"><b>${L('optRecent')}</b><span class="mut small">${L('optRecentSub')}</span></label>
