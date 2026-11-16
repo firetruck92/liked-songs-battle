@@ -5,9 +5,10 @@ root = pathlib.Path(__file__).parent
 src = root / 'src'
 t = (src / 'template.html').read_text(encoding='utf-8')
 core = (src / 'core.js').read_text(encoding='utf-8')
+i18n = (src / 'i18n.js').read_text(encoding='utf-8')
 
 def build(mode):
-    return t.replace('__MODE__', mode).replace('__CORE__', core)
+    return t.replace('__MODE__', mode).replace('__I18N__', i18n).replace('__CORE__', core)
 
 (root / 'index.html').write_text(build('local'), encoding='utf-8')
 (root / 'dist').mkdir(exist_ok=True)

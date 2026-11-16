@@ -66,8 +66,13 @@
   .drop.ping{animation:ping 1.2s ease 2}
   @keyframes ping{0%,100%{background:transparent}40%{background:#1db95422;border-color:var(--acc)}}
   body.dragging .drop{border-color:var(--acc);background:#1db9541a}
-  body.dragging::after{content:'Отпусти файл';position:fixed;inset:12px;border:3px dashed var(--acc);border-radius:20px;background:#0b0b0cd0;display:grid;place-items:center;font-size:28px;font-weight:800;color:var(--acc);pointer-events:none;z-index:20}
+  body.dragging::after{content:attr(data-drop);position:fixed;inset:12px;border:3px dashed var(--acc);border-radius:20px;background:#0b0b0cd0;display:grid;place-items:center;font-size:28px;font-weight:800;color:var(--acc);pointer-events:none;z-index:20}
   @media (max-width:720px){.fstep{flex-wrap:wrap}.fstep button{width:100%}}
+  .lang{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+  .lang button{border:0;background:transparent;color:var(--mut);padding:5px 11px;display:inline-flex;align-items:center;gap:7px;font-size:13px;letter-spacing:.03em}
+  .lang button:hover{background:#2c2c30}
+  .lang button.act{background:var(--fg);color:#000}
+  .lang svg{width:20px;height:13px;border-radius:3px;display:block;box-shadow:0 0 0 1px #0003}
   .note{background:#1db9540f;border:1px solid #1db95433;border-radius:12px;padding:12px 14px;font-size:13px;color:#cfe9d8}
   details{margin-top:14px} summary{cursor:pointer;color:var(--mut)}
   .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
@@ -147,6 +152,150 @@ function sidOf(uri) { const m = String(uri || '').match(/(?:spotify:track:|open\
 function spUrl(t) { return t.sid ? 'https://open.spotify.com/track/' + t.sid : 'https://open.spotify.com/search/' + encodeURIComponent((t.a ? t.a + ' ' : '') + t.n); }
 const embed = (sid, h) => `<iframe src="https://open.spotify.com/embed/track/${esc(sid)}?utm_source=generator&theme=0" style="height:${h}px" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
 
+/* ---------- Языки / Languages ---------- */
+// plural forms: ru — [1, 2-4, 5+], en — [1, other]
+function plu(n, forms) {
+  if (LANG === 'en') return n === 1 ? forms[0] : forms[1];
+  const a = Math.abs(n) % 100, b = a % 10;
+  return a > 10 && a < 20 ? forms[2] : b > 1 && b < 5 ? forms[1] : b === 1 ? forms[0] : forms[2];
+}
+const I18N = {
+  ru: {
+    sub: 'Выбери любимый трек из своих лайков',
+    yes: 'Да', cancel: 'Отмена',
+    copied: 'Скопировано ✓', copyFail: 'Не вышло скопировать', failShort: 'Не вышло',
+    tracks: n => `${n} ${plu(n, ['трек', 'трека', 'треков'])}`,
+    picks: n => `${n} ${plu(n, ['выбор', 'выбора', 'выборов'])}`,
+    // share image
+    imgTitle: '🏆 Мой любимый трек',
+    imgSub: (n, total) => `победил среди ${I18N.ru.tracks(n)} · ${I18N.ru.picks(total)}`,
+    shImgH: 'Картинка с результатом', drawing: 'Рисую…', drawFail: 'Не получилось нарисовать картинку', resultAlt: 'Результат',
+    share: 'Поделиться', savePng: 'Сохранить PNG', copyImg: 'Копировать картинку',
+    saveHint: 'Сохрани картинку: правый клик или долгое нажатие → «Сохранить изображение».',
+    shareTitle: 'Мой любимый трек',
+    shareText: who => `Мой любимый трек из лайков Spotify — ${who}`,
+    shareFail: 'Не получилось открыть меню «Поделиться» — сохрани PNG.',
+    saved: 'Сохранено ✓', saveCancel: 'Сохранение отменено.',
+    saveFail: 'Здесь сохранить не вышло — правый клик или долгое нажатие на картинке → «Сохранить изображение».',
+    pasteNow: 'Теперь вставь в любой чат (Ctrl+V).', copyImgBlocked: 'Копирование картинок здесь заблокировано — сохрани PNG.',
+    // share link
+    shareBtn: '🔗 Поделиться', linkCopied: 'Ссылка скопирована ✓',
+    shareInvite: 'Пройди свой турнир:',
+    friendFav: '🏆 Любимый трек друга', friendTop: 'Его топ', playYours: 'Найти свой любимый трек →',
+    friendWon: n => `победил среди ${I18N.ru.tracks(n)}`, badLink: 'Ссылка на результат повреждена — но свой турнир пройти можно.',
+    // import
+    tabFiles: 'Exportify / CSV', tabText: 'Вставить списком',
+    s1: 'Открой Exportify и войди через Spotify', s1sub: 'Откроется окошко рядом, этот сайт останется открытым',
+    openExp: 'Открыть Exportify', openAgain: 'Открыть ещё раз',
+    s2: 'Нажми Export у «Liked Songs»', s2sub: 'Скачается файл <code>liked.csv</code>. Можно выгрузить и другие плейлисты',
+    s3: 'Брось файл сюда', s3sub: 'Перетащи из загрузок или окна браузера — можно прямо на страницу',
+    dropT: 'Перетащи liked.csv сюда',
+    dropSub: 'или нажми и выбери в папке «Загрузки» — можно несколько .csv / .json (подойдёт и YourLibrary.json из экспорта данных Spotify)',
+    fileTracks: n => `${n} тр.`, totalUniq: 'Всего уникальных:', done: 'Готово →',
+    textHint: full => `Каждая строка — один трек: <b style="color:var(--fg)">Исполнитель — Название</b>${full ? ' или ссылка на трек в Spotify' : ''}.`,
+    pastePh: 'Кино — Группа крови&#10;Radiohead — Creep', loadList: 'Загрузить список',
+    limitNote: 'Здесь нет обложек и отрывков: страница работает в изолированной среде, где Spotify заблокирован. На сайте <b>firetruck92.github.io/liked-songs-battle</b> они есть.',
+    importH: 'Загрузи свои лайки', importSub: 'Выбери способ — потом начнётся турнир: из каждой пары оставляешь один трек, пока не останется победитель.',
+    privacy: 'Файлы читаются прямо в браузере и никуда не отправляются', demo: 'попробовать на демо-списке', back: '← Назад',
+    dropOverlay: 'Отпусти файл',
+    // menu
+    unfinished: 'Незаконченный турнир', unfinishedSub: (n, d, t) => `${I18N.ru.tracks(n)} · сыграно ${d} из ${t}`, cont: 'Продолжить →',
+    prevWinner: 'Прошлый победитель', results: 'Результаты', otherList: 'Другой список', reset: 'Сбросить',
+    loaded: n => `${plu(n, ['трек загружен', 'трека загружено', 'треков загружено'])}`, dupes: d => ` · склеено дублей: ${d}`,
+    optAll: 'Все треки', pcs: n => `${n} шт.`, optRecent: 'Последние', optRecentSub: 'недавно лайкнутые', optRandom: 'Случайные', optRandomSub: 'случайная выборка',
+    howMany: 'Сколько треков:', start: 'Начать турнир →',
+    controls: 'Управление:', cLeft: 'левый', cRight: 'правый', cRand: 'не могу выбрать', cUndo: 'отменить',
+    est: (k, m) => `${I18N.ru.picks(k - 1)} · примерно ${m} мин`,
+    restartQ: 'Начать заново? Незаконченный турнир пропадёт.', resetQ: 'Удалить загруженный список и турнир?',
+    // battle
+    listen: '▶ Слушать в Spotify', thisL: '← Этот', thisR: 'Этот →', pair: (i, n) => `пара ${i} из ${n}`,
+    saveWarn: 'Браузеру не хватает места, прогресс сейчас не сохраняется — не закрывай и не перезагружай вкладку, или начни турнир на меньшем числе треков.',
+    cantChoose: 'Не могу выбрать — случайно', undo: '↶ Отменить', menu: 'Меню',
+    // result
+    openSp: '▶ Открыть в Spotify', yourFav: '🏆 Твой любимый трек', wonAmong: n => `победил среди ${I18N.ru.tracks(n)}`,
+    table: 'Итоговая таблица', replayLast: '↶ Переиграть последний выбор',
+    tableHint: '«топ-8» — трек дошёл до четвертьфинала. Внутри одной группы порядок условный.',
+    showAll: n => `Показать все ${n}`, imgBtn: '📸 Картинка', copyTop: 'Скопировать топ', newT: 'Новый турнир',
+    // stages & labels
+    playIn: p => `Отборочный раунд (до ${p})`, final: 'Финал', semi: 'Полуфинал', quarter: 'Четвертьфинал', roundOf: s => `1/${s / 2} финала`,
+    lWinner: '🏆 Победитель', lQual: 'отбор', l2: '2 место', lTop: s => `топ-${s}`, notFound: '(трек не найден)',
+    // errors
+    eNoRows: 'в файле нет строк с треками', eNoName: h => 'не нашёл колонку с названием трека. Заголовки в файле: ' + h,
+    eMin: n => 'нужно хотя бы 2 трека, нашёл ' + n, eNone: 'треков не найдено',
+    fixedMsg: 'Мы исправили чтение исполнителей из CSV — загрузи liked.csv ещё раз, пожалуйста.',
+    demoA: 'Демо-артист', demoN: 'Песня №', demoAl: 'Демо-альбом', trackSid: 'Трек ',
+  },
+  en: {
+    sub: 'Find your favorite track among your liked songs',
+    yes: 'Yes', cancel: 'Cancel',
+    copied: 'Copied ✓', copyFail: "Couldn't copy", failShort: 'Failed',
+    tracks: n => `${n} ${plu(n, ['track', 'tracks'])}`,
+    picks: n => `${n} ${plu(n, ['pick', 'picks'])}`,
+    imgTitle: '🏆 My favorite track',
+    imgSub: (n, total) => `won among ${I18N.en.tracks(n)} · ${I18N.en.picks(total)}`,
+    shImgH: 'Result image', drawing: 'Drawing…', drawFail: "Couldn't draw the image", resultAlt: 'Result',
+    share: 'Share', savePng: 'Save PNG', copyImg: 'Copy image',
+    saveHint: 'Save the image: right-click or long-press → “Save image”.',
+    shareTitle: 'My favorite track',
+    shareText: who => `My favorite song from my Spotify likes — ${who}`,
+    shareFail: "Couldn't open the share menu — save the PNG instead.",
+    saved: 'Saved ✓', saveCancel: 'Saving cancelled.',
+    saveFail: "Couldn't save here — right-click or long-press the image → “Save image”.",
+    pasteNow: 'Now paste it into any chat (Ctrl+V).', copyImgBlocked: 'Copying images is blocked here — save the PNG instead.',
+    shareBtn: '🔗 Share', linkCopied: 'Link copied ✓',
+    shareInvite: 'Find yours:',
+    friendFav: '🏆 Your friend’s favorite', friendTop: 'Their top', playYours: 'Find your own favorite →',
+    friendWon: n => `won among ${I18N.en.tracks(n)}`, badLink: 'This result link is broken — but you can still play your own.',
+    tabFiles: 'Exportify / CSV', tabText: 'Paste a list',
+    s1: 'Open Exportify and log in with Spotify', s1sub: 'It opens in a small window — this site stays open',
+    openExp: 'Open Exportify', openAgain: 'Open again',
+    s2: 'Click Export next to “Liked Songs”', s2sub: 'You’ll get <code>liked.csv</code>. You can export other playlists too',
+    s3: 'Drop the file here', s3sub: 'Drag it from your Downloads or the browser — anywhere on the page works',
+    dropT: 'Drop liked.csv here',
+    dropSub: 'or click to pick it from Downloads — several .csv / .json files work too (including YourLibrary.json from your Spotify data export)',
+    fileTracks: n => `${n} tr.`, totalUniq: 'Unique total:', done: 'Done →',
+    textHint: full => `One track per line: <b style="color:var(--fg)">Artist — Title</b>${full ? ' or a Spotify track link' : ''}.`,
+    pastePh: 'Radiohead — Creep&#10;Nirvana — Lithium', loadList: 'Load list',
+    limitNote: 'No covers or previews here: this page runs in a sandbox where Spotify is blocked. The site <b>firetruck92.github.io/liked-songs-battle</b> has them.',
+    importH: 'Load your liked songs', importSub: 'Pick a way — then the tournament starts: keep one track from each pair until a winner remains.',
+    privacy: 'Files are read right in your browser and never uploaded', demo: 'try the demo list', back: '← Back',
+    dropOverlay: 'Drop the file',
+    unfinished: 'Unfinished tournament', unfinishedSub: (n, d, t) => `${I18N.en.tracks(n)} · ${d} of ${t} played`, cont: 'Continue →',
+    prevWinner: 'Last winner', results: 'Results', otherList: 'Other list', reset: 'Reset',
+    loaded: n => plu(n, ['track loaded', 'tracks loaded']), dupes: d => ` · duplicates merged: ${d}`,
+    optAll: 'All tracks', pcs: n => `${n}`, optRecent: 'Most recent', optRecentSub: 'recently liked', optRandom: 'Random', optRandomSub: 'random sample',
+    howMany: 'How many tracks:', start: 'Start tournament →',
+    controls: 'Controls:', cLeft: 'left', cRight: 'right', cRand: "can't choose", cUndo: 'undo',
+    est: (k, m) => `${I18N.en.picks(k - 1)} · about ${m} min`,
+    restartQ: 'Start over? The unfinished tournament will be lost.', resetQ: 'Delete the loaded list and the tournament?',
+    listen: '▶ Listen on Spotify', thisL: '← This one', thisR: 'This one →', pair: (i, n) => `pair ${i} of ${n}`,
+    saveWarn: 'Your browser is out of storage, progress isn’t being saved — don’t close or reload the tab, or start a tournament with fewer tracks.',
+    cantChoose: 'Can’t choose — pick randomly', undo: '↶ Undo', menu: 'Menu',
+    openSp: '▶ Open in Spotify', yourFav: '🏆 Your favorite track', wonAmong: n => `won among ${I18N.en.tracks(n)}`,
+    table: 'Final standings', replayLast: '↶ Redo last pick',
+    tableHint: '“top 8” means the track reached the quarterfinal. Order within a group is arbitrary.',
+    showAll: n => `Show all ${n}`, imgBtn: '📸 Image', copyTop: 'Copy top list', newT: 'New tournament',
+    playIn: p => `Qualifying round (to ${p})`, final: 'Final', semi: 'Semifinal', quarter: 'Quarterfinal', roundOf: s => `Round of ${s}`,
+    lWinner: '🏆 Winner', lQual: 'qualifying', l2: '2nd place', lTop: s => `top ${s}`, notFound: '(track not found)',
+    eNoRows: 'the file has no track rows', eNoName: h => "couldn't find the track name column. Headers in the file: " + h,
+    eMin: n => 'need at least 2 tracks, found ' + n, eNone: 'no tracks found',
+    fixedMsg: 'We fixed how artists are read from CSV — please load liked.csv again.',
+    demoA: 'Demo artist', demoN: 'Song #', demoAl: 'Demo album', trackSid: 'Track ',
+  }
+};
+let LANG = (() => { try { const s = JSON.parse(localStorage.getItem('lang')); if (s === 'ru' || s === 'en') return s; } catch {} return /^(ru|uk|be|kk)/i.test(navigator.language || '') ? 'ru' : 'en'; })();
+function L(k, ...args) { const v = (I18N[LANG] && I18N[LANG][k] !== undefined) ? I18N[LANG][k] : I18N.ru[k]; return typeof v === 'function' ? v(...args) : v; }
+function applyLang() { document.documentElement.lang = LANG; document.body.dataset.drop = L('dropOverlay'); document.title = 'Liked Songs Battle'; }
+function setLang(l) { LANG = l; LS.set('lang', l); applyLang(); render(); }
+const FLAG = {
+  ru: '<svg viewBox="0 0 9 6" aria-hidden="true"><rect width="9" height="2" fill="#fff"/><rect y="2" width="9" height="2" fill="#0039a6"/><rect y="4" width="9" height="2" fill="#d52b1e"/></svg>',
+  en: '<svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="uk-s"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="uk-t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#uk-s)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#uk-t)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>'
+};
+function langSwitch() {
+  return `<div class="lang" role="group" aria-label="Language">${['ru', 'en'].map(l =>
+    `<button class="${LANG === l ? 'act' : ''}" onclick="setLang('${l}')" aria-pressed="${LANG === l}">${FLAG[l]}<span>${l.toUpperCase()}</span></button>`).join('')}</div>`;
+}
+
 let tracks = LS.get('tracks', null);
 let T = LS.get('tournament', null);
 let view = 'menu', showAll = false, srcTab = 'files', msg = '';
@@ -156,7 +305,7 @@ if (T && Array.isArray(T.hist) && typeof T.hist[0] === 'string') T.hist = []; //
 // списки, загруженные старой версией с ошибкой (вместо исполнителя — spotify:album:…), просим загрузить заново
 if (tracks && tracks.filter(x => /^spotify:/i.test(x.a || '')).length > tracks.length / 3) {
   tracks = null; T = null; LS.del('tracks'); LS.del('tournament');
-  msg = 'Мы исправили чтение исполнителей из CSV — загрузи liked.csv ещё раз, пожалуйста.';
+  msg = L('fixedMsg');
 }
 let expOpened = false, expWin = null;
 function openExportify() {
@@ -200,7 +349,7 @@ function parseCSV(text) {
 }
 function fromCSV(text) {
   const rows = parseCSV(text.replace(/^﻿/, ''));
-  if (rows.length < 2) throw new Error('в файле нет строк с треками');
+  if (rows.length < 2) throw new Error(L('eNoRows'));
   // заголовки бывают на разных языках (Exportify переводит их под язык браузера): «Track-Name», «Künstlername(n)», …
   const h = rows[0].map(x => x.trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' '));
   const body = rows.slice(1);
@@ -232,7 +381,7 @@ function fromCSV(text) {
     iN = 1; iA = 3; iU = 0; if (iD < 0) iD = 18;
     return body.map(r => mk(r, 1, 3, 5, 0, iD, 9, 13)).filter(x => x.n);
   }
-  if (iN < 0) throw new Error('не нашёл колонку с названием трека. Заголовки в файле: ' + rows[0].slice(0, 6).join(', '));
+  if (iN < 0) throw new Error(L('eNoName', rows[0].slice(0, 6).join(', ')));
   return body.map(r => mk(r, iN, iA, iAl, iU, iD, iI, iP)).filter(x => x.n);
 }
 function mk(r, iN, iA, iAl, iU, iD, iI, iP) {
@@ -251,7 +400,7 @@ function fromJSON(text) {
 function fromText(text) {
   return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
     const sid = sidOf(l);
-    if (sid) return { n: 'Трек ' + sid.slice(0, 6), a: '', uri: 'spotify:track:' + sid };
+    if (sid) return { n: L('trackSid') + sid.slice(0, 6), a: '', uri: 'spotify:track:' + sid };
     const m = l.match(/^(.+?)\s+[—–-]\s+(.+)$/);
     return m ? { a: m[1].trim(), n: m[2].trim() } : { a: '', n: l };
   });
@@ -279,7 +428,7 @@ function setTracks(list, sortByAdded) {
     let id = t.sid || ('h' + hash(k).toString(36)); while (ids.has(id)) id += '_';
     ids.add(id); t.id = id; delete t.added; out.push(t);
   }
-  if (out.length < 2) throw new Error('нужно хотя бы 2 трека, нашёл ' + out.length);
+  if (out.length < 2) throw new Error(L('eMin', out.length));
   // незаконченный турнир переживает загрузку нового списка: недостающие треки запоминаем в нём самом
   if (T && !T.winner) {
     const fresh = new Set(out.map(x => x.id)); T.meta = T.meta || {};
@@ -295,7 +444,7 @@ async function addFiles(files) {
     try {
       const text = await f.text();
       const list = (/\.json$/i.test(f.name) || /^\s*[\[{]/.test(text)) ? fromJSON(text) : fromCSV(text);
-      if (!list.length) throw new Error('треков не найдено');
+      if (!list.length) throw new Error(L('eNone'));
       pending = pending.filter(p => p.name !== f.name).concat({ name: f.name, list });
     } catch (e) { msg = `«${f.name}»: ${e.message}`; }
   }
@@ -305,8 +454,8 @@ function removeFile(i) { pending.splice(i, 1); render(); }
 function pendingCount() { const s = new Set(); pending.forEach(p => p.list.forEach(t => s.add(sidOf(t.uri) || ((t.a || '') + '|' + t.n).toLowerCase()))); return s.size; }
 function usePending() { try { setTracks(pending.flatMap(p => p.list), true); pending = []; msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }
 function importPasted() { try { setTracks(fromText(document.getElementById('paste').value), false); msg = ''; view = 'menu'; render(); } catch (e) { msg = e.message; render(); } }
-function demo() { const d = []; for (let i = 1; i <= 16; i++) d.push({ a: 'Демо-артист ' + ((i % 5) + 1), n: 'Песня №' + i, al: 'Демо-альбом' }); setTracks(d, false); view = 'menu'; render(); }
-function forget() { ask('Удалить загруженный список и турнир?', () => { LS.del('tracks'); LS.del('tournament'); LS.del('tok'); LS.del('cid'); tracks = null; T = null; view = 'import'; render(); }); }
+function demo() { const d = []; for (let i = 1; i <= 16; i++) d.push({ a: L('demoA') + ' ' + ((i % 5) + 1), n: L('demoN') + i, al: L('demoAl') }); setTracks(d, false); view = 'menu'; render(); }
+function forget() { ask(L('resetQ'), () => { LS.del('tracks'); LS.del('tournament'); LS.del('tok'); LS.del('cid'); tracks = null; T = null; view = 'import'; render(); }); }
 
 /* ---------- Tournament ---------- */
 var byId = {};
@@ -358,33 +507,33 @@ function undo() {
   save(); render();
 }
 function stageName() {
-  if (T.playIn) return `Отборочный раунд (до ${T.p})`;
+  if (T.playIn) return L('playIn', T.p);
   const s = T.stage;
-  return s === 2 ? 'Финал' : s === 4 ? 'Полуфинал' : s === 8 ? 'Четвертьфинал' : `1/${s / 2} финала`;
+  return s === 2 ? L('final') : s === 4 ? L('semi') : s === 8 ? L('quarter') : L('roundOf', s);
 }
 function ranking() {
-  const r = [{ id: T.winner, label: '🏆 Победитель' }];
+  const r = [{ id: T.winner, label: L('lWinner'), code: 'w' }];
   const el = T.elim.slice().sort((x, y) => (x.playIn - y.playIn) || (x.stage - y.stage));
-  for (const e of el) r.push({ id: e.id, label: e.playIn ? 'отбор' : e.stage === 2 ? '2 место' : `топ-${e.stage}` });
+  for (const e of el) r.push({ id: e.id, label: e.playIn ? L('lQual') : e.stage === 2 ? L('l2') : L('lTop', e.stage), code: e.playIn ? 'q' : String(e.stage) });
   return r;
 }
-const tr = id => byId[id] || (T && T.meta && T.meta[id]) || { id, n: '(трек не найден)', a: '', al: '', img: '', thumb: '' };
+const tr = id => byId[id] || (T && T.meta && T.meta[id]) || { id, n: L('notFound'), a: '', al: '', img: '', thumb: '' };
 
 /* ---------- UI helpers ---------- */
 function shell(inner, right = '') {
-  return `<header><div class="logo"><div class="dot">♥</div><div><h1>Liked Songs Battle</h1><div class="sub">Выбери любимый трек из своих лайков</div></div></div><div class="row">${right}</div></header>${inner}`;
+  return `<header><div class="logo"><div class="dot">♥</div><div><h1>Liked Songs Battle</h1><div class="sub">${L('sub')}</div></div></div><div class="row">${right}${langSwitch()}</div></header>${inner}`;
 }
 function ask(text, yes) {
   const m = document.createElement('div'); m.className = 'modal';
-  m.innerHTML = `<div class="panel"><div style="margin-bottom:16px">${esc(text)}</div><div class="row"><button class="pri" id="mY">Да</button><button id="mN">Отмена</button></div></div>`;
+  m.innerHTML = `<div class="panel"><div style="margin-bottom:16px">${esc(text)}</div><div class="row"><button class="pri" id="mY">${L('yes')}</button><button id="mN">${L('cancel')}</button></div></div>`;
   document.body.appendChild(m);
   m.querySelector('#mY').onclick = () => { m.remove(); yes(); };
   m.querySelector('#mN').onclick = () => m.remove();
   m.onclick = e => { if (e.target === m) m.remove(); };
 }
 function copy(text, btn) {
-  try { navigator.clipboard.writeText(text).then(() => btn.textContent = 'Скопировано ✓', () => btn.textContent = 'Не вышло скопировать'); }
-  catch { btn.textContent = 'Не вышло скопировать'; }
+  try { navigator.clipboard.writeText(text).then(() => btn.textContent = L('copied'), () => btn.textContent = L('copyFail')); }
+  catch { btn.textContent = L('copyFail'); }
 }
 function art(t, cls, big) {
   const src = big ? (t.img || t.thumb) : (t.thumb || t.img);
@@ -463,7 +612,7 @@ async function makeShareImage() {
   ctx.fillStyle = '#1db954'; ctx.font = `800 24px ${FONT}`;
   ctx.fillText('L I K E D   S O N G S   B A T T L E', W / 2, 80);
   ctx.fillStyle = '#f4f4f5'; ctx.font = `800 52px ${FONT}`;
-  ctx.fillText('🏆 Мой любимый трек', W / 2, 146);
+  ctx.fillText(L('imgTitle'), W / 2, 146);
   const S = 480, cx = (W - S) / 2, cy = 190;
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 18; ctx.fillStyle = '#000'; rrect(ctx, cx, cy, S, S, 28); ctx.fill(); ctx.restore();
   drawArt(ctx, wImg, w, cx, cy, S, 28);
@@ -471,7 +620,7 @@ async function makeShareImage() {
   const lines = wrap2(ctx, w.n, W - 140); let y = cy + S + 82;
   lines.forEach(l => { ctx.fillText(l, W / 2, y); y += 64; });
   ctx.fillStyle = '#b5b5bd'; ctx.font = `500 34px ${FONT}`; ctx.fillText(fit(ctx, w.a, W - 160), W / 2, y);
-  ctx.fillStyle = '#7c7c85'; ctx.font = `500 25px ${FONT}`; ctx.fillText(`победил среди ${T.n} треков · ${T.total} выборов`, W / 2, y + 44);
+  ctx.fillStyle = '#7c7c85'; ctx.font = `500 25px ${FONT}`; ctx.fillText(L('imgSub', T.n, T.total), W / 2, y + 44);
   const ly = y + 84;
   if (rest.length) {
     const boxH = H - ly - 64;
@@ -487,50 +636,50 @@ async function makeShareImage() {
     });
   }
   ctx.textAlign = 'center'; ctx.fillStyle = '#55555c'; ctx.font = `500 21px ${FONT}`;
-  ctx.fillText(new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, H - 26);
+  ctx.fillText(new Date().toLocaleDateString(LANG === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, H - 26);
   return new Promise(res => c.toBlob(res, 'image/png'));
 }
 let shareBlob = null, shareURL = null;
 async function openShare() {
   closeShare();
   const m = document.createElement('div'); m.className = 'modal'; m.id = 'shareModal';
-  m.innerHTML = `<div class="panel wide"><div class="row" style="margin-bottom:12px"><h2>Картинка с результатом</h2><span class="spacer"></span><button class="ghost" onclick="closeShare()">✕</button></div><div class="shareimg" style="display:grid;place-items:center" id="shBox"><span class="mut">Рисую…</span></div><div class="row" id="shBtns" style="margin-top:14px"></div><div class="mut small" id="shMsg" style="margin-top:10px"></div></div>`;
+  m.innerHTML = `<div class="panel wide"><div class="row" style="margin-bottom:12px"><h2>${L('shImgH')}</h2><span class="spacer"></span><button class="ghost" onclick="closeShare()">✕</button></div><div class="shareimg" style="display:grid;place-items:center" id="shBox"><span class="mut">${L('drawing')}</span></div><div class="row" id="shBtns" style="margin-top:14px"></div><div class="mut small" id="shMsg" style="margin-top:10px"></div></div>`;
   m.onclick = e => { if (e.target === m) closeShare(); };
   document.body.appendChild(m);
   try { shareBlob = await makeShareImage(); } catch (e) { console.error(e); shareBlob = null; }
   if (!document.getElementById('shareModal')) return;
-  if (!shareBlob) { document.getElementById('shBox').innerHTML = '<span class="err">Не получилось нарисовать картинку</span>'; return; }
+  if (!shareBlob) { document.getElementById('shBox').innerHTML = `<span class="err">${L('drawFail')}</span>`; return; }
   if (shareURL) URL.revokeObjectURL(shareURL);
   shareURL = URL.createObjectURL(shareBlob);
-  document.getElementById('shBox').outerHTML = `<img class="shareimg" src="${shareURL}" alt="Результат">`;
+  document.getElementById('shBox').outerHTML = `<img class="shareimg" src="${shareURL}" alt="${L('resultAlt')}">`;
   const file = new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' });
   const btns = [];
   let canNative = false; try { canNative = FULL && !!navigator.canShare && navigator.canShare({ files: [file] }); } catch {}
-  if (canNative) btns.push(`<button class="pri" onclick="shareNative()">Поделиться</button>`);
-  if (FULL || DL) btns.push(`<button class="${btns.length ? '' : 'pri'}" onclick="saveShare()">Сохранить PNG</button>`);
-  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) btns.push(`<button onclick="copyShare(this)">Копировать картинку</button>`);
+  if (canNative) btns.push(`<button class="pri" onclick="shareNative()">${L('share')}</button>`);
+  if (FULL || DL) btns.push(`<button class="${btns.length ? '' : 'pri'}" onclick="saveShare()">${L('savePng')}</button>`);
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) btns.push(`<button onclick="copyShare(this)">${L('copyImg')}</button>`);
   document.getElementById('shBtns').innerHTML = btns.join('');
-  shMsg(btns.length ? '' : 'Сохрани картинку: правый клик или долгое нажатие → «Сохранить изображение».');
+  shMsg(btns.length ? '' : L('saveHint'));
 }
 function closeShare() { const m = document.getElementById('shareModal'); if (m) m.remove(); }
 function shMsg(s) { const e = document.getElementById('shMsg'); if (e) e.textContent = s; }
 async function shareNative() {
   const w = tr(T.winner);
-  try { await navigator.share({ files: [new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' })], title: 'Мой любимый трек', text: `Мой любимый трек из лайков: ${w.a ? w.a + ' — ' : ''}${w.n}` }); }
-  catch (e) { if (e.name !== 'AbortError') shMsg('Не получилось открыть меню «Поделиться» — сохрани PNG.'); }
+  try { await navigator.share({ files: [new File([shareBlob], 'my-favorite-song.png', { type: 'image/png' })], title: L('shareTitle'), text: L('shareText', (w.a ? w.a + ' — ' : '') + w.n) }); }
+  catch (e) { if (e.name !== 'AbortError') shMsg(L('shareFail')); }
 }
 async function saveShare() {
-  if (FULL) { const a = document.createElement('a'); a.href = shareURL; a.download = 'my-favorite-song.png'; document.body.appendChild(a); a.click(); a.remove(); shMsg('Сохранено ✓'); return; }
-  try { await DL.save({ filename: 'my-favorite-song.png', data: shareBlob }); shMsg('Сохранено ✓'); }
-  catch (e) { shMsg(e && e.code === 'declined' ? 'Сохранение отменено.' : 'Здесь сохранить не вышло — правый клик или долгое нажатие на картинке → «Сохранить изображение».'); }
+  if (FULL) { const a = document.createElement('a'); a.href = shareURL; a.download = 'my-favorite-song.png'; document.body.appendChild(a); a.click(); a.remove(); shMsg(L('saved')); return; }
+  try { await DL.save({ filename: 'my-favorite-song.png', data: shareBlob }); shMsg(L('saved')); }
+  catch (e) { shMsg(e && e.code === 'declined' ? L('saveCancel') : L('saveFail')); }
 }
 async function copyShare(btn) {
-  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); btn.textContent = 'Скопировано ✓'; shMsg('Теперь вставь в любой чат (Ctrl+V).'); }
-  catch { btn.textContent = 'Не вышло'; shMsg('Копирование картинок здесь заблокировано — сохрани PNG.'); }
+  try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': shareBlob })]); btn.textContent = L('copied'); shMsg(L('pasteNow')); }
+  catch { btn.textContent = L('failShort'); shMsg(L('copyImgBlocked')); }
 }
 /* ---------- Views ---------- */
 function viewImport() {
-  const tabs = [['files', 'Exportify / CSV'], ['text', 'Вставить списком']];
+  const tabs = [['files', L('tabFiles')], ['text', L('tabText')]];
   const seg = `<div class="seg">${tabs.map(([k, l]) => `<button class="${srcTab === k ? 'act' : ''}" onclick="srcTab='${k}';msg='';render()">${l}</button>`).join('')}</div>`;
   let body = '';
   if (srcTab === 'files') {
@@ -538,39 +687,39 @@ function viewImport() {
       <div class="flow">
         <div class="fstep ${expOpened ? 'done' : 'cur'}">
           <div class="fnum">1</div>
-          <div class="ftxt"><b>Открой Exportify и войди через Spotify</b><div class="mut small">Откроется окошко рядом, этот сайт останется открытым</div></div>
-          <button class="${expOpened ? '' : 'pri'}" onclick="openExportify()">${expOpened ? 'Открыть ещё раз' : 'Открыть Exportify'}</button>
+          <div class="ftxt"><b>${L('s1')}</b><div class="mut small">${L('s1sub')}</div></div>
+          <button class="${expOpened ? '' : 'pri'}" onclick="openExportify()">${expOpened ? L('openAgain') : L('openExp')}</button>
         </div>
         <div class="fstep ${expOpened && !pending.length ? 'cur' : ''}">
           <div class="fnum">2</div>
-          <div class="ftxt"><b>Нажми Export у «Liked Songs»</b><div class="mut small">Скачается файл <code>liked.csv</code>. Можно выгрузить и другие плейлисты</div></div>
+          <div class="ftxt"><b>${L('s2')}</b><div class="mut small">${L('s2sub')}</div></div>
         </div>
         <div class="fstep ${expOpened && !pending.length ? 'cur' : ''}">
           <div class="fnum">3</div>
-          <div class="ftxt"><b>Брось файл сюда</b><div class="mut small">Перетащи из загрузок или окна браузера — можно прямо на страницу</div></div>
+          <div class="ftxt"><b>${L('s3')}</b><div class="mut small">${L('s3sub')}</div></div>
         </div>
       </div>
       <label class="drop ${expOpened && !pending.length ? 'wait' : ''}" id="drop">
         <input type="file" accept=".csv,.json,text/csv,application/json" multiple hidden id="fi">
-        <div class="ic">⤓</div><b>Перетащи liked.csv сюда</b><div class="mut small">или нажми и выбери в папке «Загрузки» — можно несколько .csv / .json (подойдёт и YourLibrary.json из экспорта данных Spotify)</div>
+        <div class="ic">⤓</div><b>${L('dropT')}</b><div class="mut small">${L('dropSub')}</div>
       </label>
-      ${pending.length ? `<ul class="files">${pending.map((p, i) => `<li><span>📄</span><span class="fn">${esc(p.name)}</span><span class="mut small">${p.list.length} тр.</span><button class="x ghost" onclick="removeFile(${i})">✕</button></li>`).join('')}</ul>
-        <div class="row" style="margin-top:16px"><span class="mut">Всего уникальных: <b style="color:var(--fg)">${pendingCount()}</b></span><span class="spacer"></span><button class="pri" onclick="usePending()">Готово →</button></div>` : ''}
+      ${pending.length ? `<ul class="files">${pending.map((p, i) => `<li><span>📄</span><span class="fn">${esc(p.name)}</span><span class="mut small">${L('fileTracks', p.list.length)}</span><button class="x ghost" onclick="removeFile(${i})">✕</button></li>`).join('')}</ul>
+        <div class="row" style="margin-top:16px"><span class="mut">${L('totalUniq')} <b style="color:var(--fg)">${pendingCount()}</b></span><span class="spacer"></span><button class="pri" onclick="usePending()">${L('done')}</button></div>` : ''}
       ${msg ? `<div class="err">${esc(msg)}</div>` : ''}`;
   } else {
     body = `
-      <div class="mut" style="margin-bottom:10px">Каждая строка — один трек: <b style="color:var(--fg)">Исполнитель — Название</b>${FULL ? ' или ссылка на трек в Spotify' : ''}.</div>
-      <textarea id="paste" placeholder="Кино — Группа крови&#10;Radiohead — Creep"></textarea>
-      <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="pri" onclick="importPasted()">Загрузить список</button></div>
+      <div class="mut" style="margin-bottom:10px">${L('textHint', FULL)}</div>
+      <textarea id="paste" placeholder="${L('pastePh')}"></textarea>
+      <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="pri" onclick="importPasted()">${L('loadList')}</button></div>
       ${msg ? `<div class="err">${esc(msg)}</div>` : ''}`;
   }
-  const limit = FULL ? '' : `<div class="note" style="margin-top:20px">Здесь нет обложек и отрывков: страница работает в изолированной среде, где Spotify заблокирован. На сайте <b>firetruck92.github.io/liked-songs-battle</b> они есть.</div>`;
+  const limit = FULL ? '' : `<div class="note" style="margin-top:20px">${L('limitNote')}</div>`;
   app.innerHTML = shell(`
-    <div class="panel"><h2>Загрузи свои лайки</h2><div class="mut small">Выбери способ — потом начнётся турнир: из каждой пары оставляешь один трек, пока не останется победитель.</div>
+    <div class="panel"><h2>${L('importH')}</h2><div class="mut small">${L('importSub')}</div>
       ${seg}${body}${limit}
     </div>
-    <div class="mut small">Файлы читаются прямо в браузере и никуда не отправляются · <a href="#" onclick="demo();return false">попробовать на демо-списке</a></div>`,
-    tracks ? `<button onclick="view='menu';msg='';render()">← Назад</button>` : '');
+    <div class="mut small">${L('privacy')} · <a href="#" onclick="demo();return false">${L('demo')}</a></div>`,
+    tracks ? `<button onclick="view='menu';msg='';render()">${L('back')}</button>` : '');
   const fi = document.getElementById('fi'), dr = document.getElementById('drop');
   if (fi) {
     fi.onchange = () => { addFiles([...fi.files]); fi.value = ''; };
@@ -582,30 +731,30 @@ function viewImport() {
 
 function viewMenu() {
   if (!tracks) return viewImport();
-  const n = tracks.length, at = LS.get('tracksAt', 0);
+  const n = tracks.length, at = LS.get('tracksAt', 0), dupes = LS.get('dupes', 0);
   let cont = '';
-  if (T && !T.winner) cont = `<div class="panel row"><div><h2>Незаконченный турнир</h2><div class="mut">${T.n} треков · сыграно ${T.done} из ${T.total}</div></div><span class="spacer"></span><button class="pri" onclick="view='battle';render()">Продолжить →</button></div>`;
-  else if (T && T.winner) { const w = tr(T.winner); cont = `<div class="panel row"><div><div class="crown">Прошлый победитель</div><b>${esc(w.n)}</b> <span class="mut">${esc(w.a)}</span></div><span class="spacer"></span><button onclick="view='battle';render()">Результаты</button></div>`; }
-  const right = `<button onclick="msg='';view='import';render()">Другой список</button><button class="ghost" onclick="forget()">Сбросить</button>`;
+  if (T && !T.winner) cont = `<div class="panel row"><div><h2>${L('unfinished')}</h2><div class="mut">${L('unfinishedSub', T.n, T.done, T.total)}</div></div><span class="spacer"></span><button class="pri" onclick="view='battle';render()">${L('cont')}</button></div>`;
+  else if (T && T.winner) { const w = tr(T.winner); cont = `<div class="panel row"><div><div class="crown">${L('prevWinner')}</div><b>${esc(w.n)}</b> <span class="mut">${esc(w.a)}</span></div><span class="spacer"></span><button onclick="view='battle';render()">${L('results')}</button></div>`; }
+  const right = `<button onclick="msg='';view='import';render()">${L('otherList')}</button><button class="ghost" onclick="forget()">${L('reset')}</button>`;
   app.innerHTML = shell(`
     ${msg ? `<div class="err" style="margin:0 0 12px">${esc(msg)}</div>` : ''}
     ${cont}
     <div class="panel">
-      <div class="row"><div><div class="stat">${n}</div><div class="mut small">треков загружено${LS.get('dupes', 0) ? ` · склеено дублей: ${LS.get('dupes', 0)}` : ''}${at ? ' · ' + new Date(at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
+      <div class="row"><div><div class="stat">${n}</div><div class="mut small">${L('loaded', n)}${dupes ? L('dupes', dupes) : ''}${at ? ' · ' + new Date(at).toLocaleString(LANG === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div></div></div>
       <div class="opts">
-        <label class="opt"><input type="radio" name="pool" value="all" checked><b>Все треки</b><span class="mut small">${n} шт.</span></label>
-        <label class="opt"><input type="radio" name="pool" value="recent"><b>Последние</b><span class="mut small">недавно лайкнутые</span></label>
-        <label class="opt"><input type="radio" name="pool" value="random"><b>Случайные</b><span class="mut small">случайная выборка</span></label>
+        <label class="opt"><input type="radio" name="pool" value="all" checked><b>${L('optAll')}</b><span class="mut small">${L('pcs', n)}</span></label>
+        <label class="opt"><input type="radio" name="pool" value="recent"><b>${L('optRecent')}</b><span class="mut small">${L('optRecentSub')}</span></label>
+        <label class="opt"><input type="radio" name="pool" value="random"><b>${L('optRandom')}</b><span class="mut small">${L('optRandomSub')}</span></label>
       </div>
-      <div class="row" id="nrow">Сколько треков: <input type="number" id="N" min="2" max="${n}" value="${Math.min(64, n)}"></div>
-      <div class="row" style="margin-top:18px"><span class="mut" id="est"></span><span class="spacer"></span><button class="pri" onclick="start()">Начать турнир →</button></div>
+      <div class="row" id="nrow">${L('howMany')} <input type="number" id="N" min="2" max="${n}" value="${Math.min(64, n)}"></div>
+      <div class="row" style="margin-top:18px"><span class="mut" id="est"></span><span class="spacer"></span><button class="pri" onclick="start()">${L('start')}</button></div>
     </div>
-    <div class="mut small">Управление: <span class="kbd">←</span> левый · <span class="kbd">→</span> правый · <span class="kbd">↓</span> не могу выбрать · <span class="kbd">Z</span> отменить</div>`, right);
+    <div class="mut small">${L('controls')} <span class="kbd">←</span> ${L('cLeft')} · <span class="kbd">→</span> ${L('cRight')} · <span class="kbd">↓</span> ${L('cRand')} · <span class="kbd">Z</span> ${L('cUndo')}</div>`, right);
   const upd = () => {
     const mode = document.querySelector('input[name=pool]:checked').value;
     document.getElementById('nrow').style.display = mode === 'all' ? 'none' : 'flex';
     const k = mode === 'all' ? n : Math.max(2, Math.min(n, +document.getElementById('N').value || 2));
-    document.getElementById('est').textContent = `${k - 1} выборов · примерно ${Math.max(1, Math.round((k - 1) * 6 / 60))} мин`;
+    document.getElementById('est').textContent = L('est', k, Math.max(1, Math.round((k - 1) * 6 / 60)));
   };
   app.querySelectorAll('input').forEach(i => i.addEventListener('input', upd)); upd();
 }
@@ -619,7 +768,7 @@ function start() {
     if (mode === 'random') ids = shuffle(ids).slice(0, k);
     T = newTournament(ids); save(); view = 'battle'; render();
   };
-  if (T && !T.winner) ask('Начать заново? Незаконченный турнир пропадёт.', go); else go();
+  if (T && !T.winner) ask(L('restartQ'), go); else go();
 }
 
 function card(t, side) {
@@ -627,63 +776,114 @@ function card(t, side) {
   if (FULL && (t.img || t.thumb)) { visual = art(t, 'cover', true).replace('<img', `<img data-side="${side}"`); if (t.sid) player = embed(t.sid, 80); }
   else if (FULL && t.sid) { visual = ''; player = embed(t.sid, 352); }
   else visual = `<div class="cover" style="${grad(t)}" onclick="pick(${side})">${esc(initials(t))}</div>`;
-  const listen = FULL && t.sid ? '' : `<a class="listen" href="${esc(spUrl(t))}" target="_blank" rel="noopener">▶ Слушать в Spotify</a>`;
+  const listen = FULL && t.sid ? '' : `<a class="listen" href="${esc(spUrl(t))}" target="_blank" rel="noopener">${L('listen')}</a>`;
   return `<div class="card">${visual}${player}
     <div class="meta"><div class="tname">${esc(t.n)}</div><div class="tart">${esc(t.a)}</div><div class="tal">${esc(t.al)}</div></div>
-    ${listen}<button class="pri pick" onclick="pick(${side})">${side ? 'Этот →' : '← Этот'}</button></div>`;
+    ${listen}<button class="pri pick" onclick="pick(${side})">${side ? L('thisR') : L('thisL')}</button></div>`;
 }
 
 function viewBattle() {
   const a = tr(T.cur[T.i]), b = tr(T.cur[T.i + 1]);
   app.innerHTML = shell(`
-    <div class="stage"><b>${stageName()}</b><span class="mut">пара ${T.i / 2 + 1} из ${T.cur.length / 2}</span><span class="spacer"></span><span class="mut small">${T.done} / ${T.total}</span></div>
-    ${saveFailed ? `<div class="err" style="margin:8px 0">Браузеру не хватает места, прогресс сейчас не сохраняется — не закрывай и не перезагружай вкладку, или начни турнир на меньшем числе треков.</div>` : ''}<div class="bar" style="margin-top:10px"><div style="width:${T.done / T.total * 100}%"></div></div>
+    <div class="stage"><b>${stageName()}</b><span class="mut">${L('pair', T.i / 2 + 1, T.cur.length / 2)}</span><span class="spacer"></span><span class="mut small">${T.done} / ${T.total}</span></div>
+    ${saveFailed ? `<div class="err" style="margin:8px 0">${L('saveWarn')}</div>` : ''}<div class="bar" style="margin-top:10px"><div style="width:${T.done / T.total * 100}%"></div></div>
     <div class="vs">${card(a, 0)}<div class="vsmark"><span>VS</span></div>${card(b, 1)}</div>
-    <div class="center"><button class="ghost" onclick="pick(-1)">Не могу выбрать — случайно</button></div>`,
-    `<button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>↶ Отменить</button><button onclick="view='menu';render()">Меню</button>`);
+    <div class="center"><button class="ghost" onclick="pick(-1)">${L('cantChoose')}</button></div>`,
+    `<button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>${L('undo')}</button><button onclick="view='menu';render()">${L('menu')}</button>`);
+}
+
+function winnerPanel(w, crown, sub) {
+  const wArt = FULL && (w.img || w.thumb) ? art(w, 'cover', true) : (FULL && w.sid ? '' : `<div class="cover" style="${grad(w)}">${esc(initials(w))}</div>`);
+  const wPlay = FULL && w.sid ? embed(w.sid, wArt ? 152 : 352) : `<a href="${esc(spUrl(w))}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px">${L('openSp')}</a>`;
+  return `<div class="panel winner" style="${wArt ? '' : 'grid-template-columns:1fr'}">
+      ${wArt}
+      <div><div class="crown">${crown}</div>
+        <div class="tname" style="font-size:28px;margin-top:6px">${esc(w.n)}</div>
+        <div class="tart" style="font-size:17px">${esc(w.a)}</div>
+        <div class="tal">${w.al ? esc(w.al) + ' · ' : ''}${sub}</div>
+        ${wPlay}
+      </div>
+    </div>`;
+}
+function rankList(list) {
+  return `<ol class="rank">${list.map((x, i) => `<li><span class="num">${i + 1}</span>${art(x.t, 'sq')}<div class="t"><div>${esc(x.t.n)}</div><div class="mut small">${esc(x.t.a)}</div></div><span class="pill ${i === 0 ? 'g' : ''}">${x.label.replace('🏆 ', '')}</span></li>`).join('')}</ol>`;
 }
 
 function viewResult() {
   const w = tr(T.winner), r = ranking(), list = showAll ? r : r.slice(0, 32);
-  const wArt = FULL && (w.img || w.thumb) ? art(w, 'cover', true) : (FULL && w.sid ? '' : `<div class="cover" style="${grad(w)}">${esc(initials(w))}</div>`);
-  const wPlay = FULL && w.sid ? embed(w.sid, wArt ? 152 : 352).replace(/style="height:\d+px"/, `style="height:${wArt ? 152 : 352}px"`) : `<a href="${esc(spUrl(w))}" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px">▶ Открыть в Spotify</a>`;
   app.innerHTML = shell(`
-    <div class="panel winner" style="${wArt ? '' : 'grid-template-columns:1fr'}">
-      ${wArt}
-      <div><div class="crown">🏆 Твой любимый трек</div>
-        <div class="tname" style="font-size:28px;margin-top:6px">${esc(w.n)}</div>
-        <div class="tart" style="font-size:17px">${esc(w.a)}</div>
-        <div class="tal">${w.al ? esc(w.al) + ' · ' : ''}победил среди ${T.n} треков</div>
-        ${wPlay}
-      </div>
-    </div>
+    ${winnerPanel(w, L('yourFav'), L('wonAmong', T.n))}
     <div class="panel">
-      <div class="row" style="margin-bottom:6px"><h2>Итоговая таблица</h2><span class="spacer"></span><button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>↶ Переиграть последний выбор</button></div>
-      <div class="mut small" style="margin-bottom:10px">«топ-8» — трек дошёл до четвертьфинала. Внутри одной группы порядок условный.</div>
-      <ol class="rank">${list.map((x, i) => { const t = tr(x.id); return `<li><span class="num">${i + 1}</span>${art(t, 'sq')}<div class="t"><div>${esc(t.n)}</div><div class="mut small">${esc(t.a)}</div></div><span class="pill ${i === 0 ? 'g' : ''}">${x.label.replace('🏆 ', '')}</span></li>`; }).join('')}</ol>
-      ${r.length > 32 && !showAll ? `<div class="center"><button onclick="showAll=true;render()">Показать все ${r.length}</button></div>` : ''}
+      <div class="row" style="margin-bottom:6px"><h2>${L('table')}</h2><span class="spacer"></span><button onclick="undo()" ${T.hist.length ? '' : 'disabled'}>${L('replayLast')}</button></div>
+      <div class="mut small" style="margin-bottom:10px">${L('tableHint')}</div>
+      ${rankList(list.map(x => ({ t: tr(x.id), label: x.label })))}
+      ${r.length > 32 && !showAll ? `<div class="center"><button onclick="showAll=true;render()">${L('showAll', r.length)}</button></div>` : ''}
     </div>`,
-    `<button class="pri" onclick="openShare()">📸 Картинка с результатом</button><button onclick="copyTop(this)">Скопировать топ</button><button onclick="view='menu';render()">Новый турнир</button>`);
+    `<button class="pri" onclick="shareLink(this)">${L('shareBtn')}</button><button onclick="openShare()">${L('imgBtn')}</button><button onclick="copyTop(this)">${L('copyTop')}</button><button onclick="view='menu';render()">${L('newT')}</button>`);
 }
 function copyTop(btn) {
   copy(ranking().slice(0, 32).map((x, i) => { const t = tr(x.id); return `${i + 1}. ${t.a ? t.a + ' — ' : ''}${t.n} (${x.label.replace('🏆 ', '')})`; }).join('\n'), btn);
 }
 
+/* ---------- Ссылка на результат / Result link ---------- */
+// Топ-10 упаковывается прямо в адрес (#r=…), сервер не нужен.
+function b64urlEncode(s) { const b = new TextEncoder().encode(s); let bin = ''; b.forEach(x => bin += String.fromCharCode(x)); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function b64urlDecode(s) { const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/')); return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))); }
+function resultCode() {
+  const r = ranking().slice(0, 10);
+  return b64urlEncode(JSON.stringify({ v: 1, n: T.n, t: r.map(x => { const t = tr(x.id); return [t.n, t.a, t.sid || '', (t.img || '').replace('https://i.scdn.co/image/', ''), x.code]; }) }));
+}
+function resultUrl() { return location.origin + location.pathname + '#r=' + resultCode(); }
+async function shareLink(btn) {
+  const w = tr(T.winner), url = resultUrl();
+  const text = L('shareText', (w.a ? w.a + ' — ' : '') + w.n) + '. ' + L('shareInvite');
+  if (FULL && navigator.share && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) {
+    try { await navigator.share({ title: L('shareTitle'), text, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  copy(text + ' ' + url, btn);
+  setTimeout(() => { if (btn.textContent === L('copied')) btn.textContent = L('linkCopied'); }, 0);
+}
+let shared = null;
+function readShared() {
+  const m = location.hash.match(/^#r=([A-Za-z0-9_-]+)/);
+  if (!m) return null;
+  try {
+    const d = JSON.parse(b64urlDecode(m[1]));
+    if (!d || !Array.isArray(d.t) || !d.t.length) throw 0;
+    return { n: +d.n || d.t.length, list: d.t.map(x => ({ t: { n: String(x[0] || ''), a: String(x[1] || ''), al: '', sid: /^[A-Za-z0-9]{22}$/.test(x[2]) ? x[2] : '', img: /^[A-Za-z0-9]{20,60}$/.test(x[3] || '') ? 'https://i.scdn.co/image/' + x[3] : '', thumb: '' }, code: String(x[4] || '') })) };
+  } catch { return { bad: true }; }
+}
+function sharedLabel(c) { return c === 'w' ? L('lWinner') : c === 'q' ? L('lQual') : c === '2' ? L('l2') : L('lTop', c); }
+function viewShared() {
+  const leave = `<button class="pri" onclick="leaveShared()">${L('playYours')}</button>`;
+  if (shared.bad) { app.innerHTML = shell(`<div class="panel"><div class="err" style="margin:0 0 14px">${L('badLink')}</div>${leave}</div>`); return; }
+  const w = shared.list[0].t;
+  app.innerHTML = shell(`
+    ${winnerPanel(w, L('friendFav'), L('friendWon', shared.n))}
+    ${shared.list.length > 1 ? `<div class="panel"><h2 style="margin-bottom:10px">${L('friendTop')}</h2>${rankList(shared.list.map(x => ({ t: x.t, label: sharedLabel(x.code) })))}</div>` : ''}
+    <div class="center">${leave}</div>`, leave);
+}
+function leaveShared() { shared = null; history.replaceState(null, '', location.pathname); render(); }
+
 function render() {
-  if (view === 'import' || !tracks) viewImport();
+  if (shared) viewShared();
+  else if (view === 'import' || !tracks) viewImport();
   else if (view === 'battle' && T) (T.winner ? viewResult : viewBattle)();
   else viewMenu();
   window.scrollTo(0, 0);
 }
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeShare();
-  if (view !== 'battle' || !T || ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.querySelector('.modal')) return;
+  if (view !== 'battle' || !T || shared || ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.querySelector('.modal')) return;
   if (!T.winner && e.key === 'ArrowLeft') { e.preventDefault(); pick(0); }
   else if (!T.winner && e.key === 'ArrowRight') { e.preventDefault(); pick(1); }
   else if (!T.winner && e.key === 'ArrowDown') { e.preventDefault(); pick(-1); }
   else if (['z', 'Z', 'я', 'Я', 'Backspace'].includes(e.key)) { e.preventDefault(); undo(); }
 });
+window.addEventListener('hashchange', () => { shared = readShared(); render(); });
 
+if (FULL) shared = readShared();
+applyLang();
 render();
 
 </script>

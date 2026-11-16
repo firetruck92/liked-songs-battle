@@ -47,14 +47,14 @@ function undo() {
   save(); render();
 }
 function stageName() {
-  if (T.playIn) return `Отборочный раунд (до ${T.p})`;
+  if (T.playIn) return L('playIn', T.p);
   const s = T.stage;
-  return s === 2 ? 'Финал' : s === 4 ? 'Полуфинал' : s === 8 ? 'Четвертьфинал' : `1/${s / 2} финала`;
+  return s === 2 ? L('final') : s === 4 ? L('semi') : s === 8 ? L('quarter') : L('roundOf', s);
 }
 function ranking() {
-  const r = [{ id: T.winner, label: '🏆 Победитель' }];
+  const r = [{ id: T.winner, label: L('lWinner'), code: 'w' }];
   const el = T.elim.slice().sort((x, y) => (x.playIn - y.playIn) || (x.stage - y.stage));
-  for (const e of el) r.push({ id: e.id, label: e.playIn ? 'отбор' : e.stage === 2 ? '2 место' : `топ-${e.stage}` });
+  for (const e of el) r.push({ id: e.id, label: e.playIn ? L('lQual') : e.stage === 2 ? L('l2') : L('lTop', e.stage), code: e.playIn ? 'q' : String(e.stage) });
   return r;
 }
-const tr = id => byId[id] || (T && T.meta && T.meta[id]) || { id, n: '(трек не найден)', a: '', al: '', img: '', thumb: '' };
+const tr = id => byId[id] || (T && T.meta && T.meta[id]) || { id, n: L('notFound'), a: '', al: '', img: '', thumb: '' };
